@@ -10,6 +10,12 @@ import { Account } from "./Account";
 import { Transaction } from "./Transaction";
 import { Budget } from "./Budget";
 
+export enum UserRole {
+  USER = "USER",
+  ADMIN = "ADMIN",
+  SUPER_ADMIN = "SUPER_ADMIN",
+}
+
 @Entity("users")
 export class User {
   @PrimaryGeneratedColumn("uuid")
@@ -26,6 +32,9 @@ export class User {
 
   @Column({ nullable: false })
   lastName: string;
+
+  @Column({ type: "enum", enum: UserRole, default: UserRole.USER })
+  role: UserRole;
 
   @Column({ nullable: true })
   avatar?: string;

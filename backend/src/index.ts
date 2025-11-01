@@ -14,6 +14,7 @@ import transactionRoutes from "./routes/transaction";
 import categoryRoutes from "./routes/category";
 import budgetRoutes from "./routes/budget";
 import dashboardRoutes from "./routes/dashboard";
+import adminRoutes from "./routes/admin";
 
 // Load environment variables
 config();
@@ -56,14 +57,15 @@ app.get("/health", (_req, res) => {
   });
 });
 
-// API routes - using mock data for now
-// app.use("/api/auth", authRoutes);
-// app.use("/api/users", userRoutes);
-// app.use("/api/accounts", accountRoutes);
-// app.use("/api/transactions", transactionRoutes);
-// app.use("/api/categories", categoryRoutes);
-// app.use("/api/budgets", budgetRoutes);
+// API routes
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/accounts", accountRoutes);
+app.use("/api/transactions", transactionRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/budgets", budgetRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/admin", adminRoutes); // Admin routes
 
 // 404 handler
 app.use("*", (req, res) => {
@@ -93,13 +95,18 @@ app.use(
 // Initialize database and start server
 const startServer = async () => {
   try {
-    // Database initialization disabled for now - using mock data
-    console.log("📊 Using mock data - database disabled");
+    // Initialize database connection
+    await initializeDatabase();
+    console.log("✅ Database connected successfully");
 
     app.listen(PORT, () => {
       console.log(`🚀 FinTrackr Backend Server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+      console.log(`👤 User Registration: POST http://localhost:${PORT}/api/auth/register`);
+      console.log(`🔐 User Login: POST http://localhost:${PORT}/api/auth/login`);
+      console.log(`🛡️  Admin Login: POST http://localhost:${PORT}/api/auth/admin/login`);
+      console.log(`👨‍💼 Admin Dashboard: GET http://localhost:${PORT}/api/admin/users`);
     });
   } catch (error) {
     console.error("Failed to start server:", error);
