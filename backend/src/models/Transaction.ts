@@ -55,7 +55,7 @@ export class Transaction {
   date: Date;
 
   @Column({ nullable: true })
-  notes?: string;
+  notes?: string | null;
 
   @Column({ nullable: false })
   userId: string;
@@ -64,7 +64,7 @@ export class Transaction {
   accountId: string;
 
   @Column({ nullable: true })
-  categoryId?: string;
+  categoryId?: string | null;
 
   @Column({ nullable: true })
   importBatchId?: string;
@@ -92,7 +92,7 @@ export class Transaction {
     onDelete: "SET NULL",
   })
   @JoinColumn({ name: "categoryId" })
-  category?: Category;
+  category?: Category | null;
 
   @ManyToOne(() => ImportBatch, (importBatch) => importBatch.transactions, {
     nullable: true,

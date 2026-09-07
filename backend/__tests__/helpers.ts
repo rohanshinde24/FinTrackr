@@ -21,3 +21,47 @@ export const registerTestUser = async (
     userId: response.body.data.user.id,
   };
 };
+
+export const createTestAccount = async (
+  app: Express,
+  token: string,
+  overrides: Record<string, unknown> = {}
+): Promise<string> => {
+  const response = await request(app)
+    .post("/api/v1/accounts")
+    .set("authorization", `Bearer ${token}`)
+    .send({
+      name: "Test checking",
+      type: "CHECKING",
+      openingBalance: "0.00",
+      currency: "USD",
+      ...overrides,
+    });
+
+  if (response.status !== 201) {
+    throw new Error(`Test account creation failed with ${response.status}`);
+  }
+
+  return response.body.data.account.id;
+};
+
+export const createTestCategory = async (
+  app: Express,
+  token: string,
+  overrides: Record<string, unknown> = {}
+): Promise<string> => {
+  const response = await request(app)
+    .post("/api/v1/categories")
+    .set("authorization", `Bearer ${token}`)
+    .send({
+      name: "Test expense",
+      type: "EXPENSE",
+      ...overrides,
+    });
+
+  if (response.status !== 201) {
+    throw new Error(`Test category creation failed with ${response.status}`);
+  }
+
+  return response.body.data.category.id;
+};
