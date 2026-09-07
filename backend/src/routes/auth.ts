@@ -1,25 +1,46 @@
 import { Router, Request, Response } from "express";
 import { body, validationResult } from "express-validator";
 import bcrypt from "bcryptjs";
-import jwt, { Secret } from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
 import { AppDataSource } from "../config/database";
 import { User, UserRole } from "../models/User";
 import { authenticateToken, AuthRequest } from "../middleware/auth";
+import { sendError } from "../http/respond";
 
 const router = Router();
 const userRepository = AppDataSource.getRepository(User);
 
+const publicUser = (user: User) => ({
+  id: user.id,
+  email: user.email,
+  firstName: user.firstName,
+  lastName: user.lastName,
+  role: user.role,
+  defaultCurrency: user.defaultCurrency,
+  createdAt: user.createdAt,
+});
+
+const signAccessToken = (user: User): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not configured");
+  }
+
+  const expiresIn = (process.env.JWT_EXPIRES_IN || "7d") as SignOptions["expiresIn"];
+  return jwt.sign({ userId: user.id }, secret, { expiresIn });
+};
+
 // Validation middleware
 const validateRegistration = [
   body("email").isEmail().normalizeEmail(),
-  body("password").isLength({ min: 8 }),
-  body("firstName").trim().notEmpty(),
-  body("lastName").trim().notEmpty(),
+  body("password").isLength({ min: 8, max: 128 }),
+  body("firstName").trim().notEmpty().isLength({ max: 80 }),
+  body("lastName").trim().notEmpty().isLength({ max: 80 }),
 ];
 
 const validateLogin = [
   body("email").isEmail().normalizeEmail(),
-  body("password").notEmpty(),
+  body("password").notEmpty().isLength({ max: 128 }),
 ];
 
 // Register new user
@@ -30,10 +51,13 @@ router.post(
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res.status(400).json({
-          success: false,
-          errors: errors.array(),
-        });
+        return sendError(
+          res,
+          400,
+          "VALIDATION_ERROR",
+          "Request validation failed",
+          errors.array()
+        );
       }
 
       const { email, password, firstName, lastName } = req.body;
@@ -41,10 +65,7 @@ router.post(
       // Check if user already exists
       const existingUser = await userRepository.findOne({ where: { email } });
       if (existingUser) {
-        return res.status(409).json({
-          success: false,
-          error: "User with this email already exists",
-        });
+        return sendError(res, 409, "EMAIL_ALREADY_EXISTS", "Email is already registered");
       }
 
       // Hash password
@@ -61,31 +82,18 @@ router.post(
 
       await userRepository.save(user);
 
-      // Generate JWT token
-      // @ts-ignore - TypeScript has issues with jwt.sign overloads
-      const token = jwt.sign(
-        { userId: user.id },
-        process.env.JWT_SECRET || "fallback-secret",
-        { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
-      );
-
-      // Remove password from response
-      const { password: _, ...userWithoutPassword } = user;
+      const token = signAccessToken(user);
 
       res.status(201).json({
         success: true,
-        message: "User registered successfully",
         data: {
-          user: userWithoutPassword,
+          user: publicUser(user),
           token,
         },
       });
     } catch (error) {
       console.error("Registration error:", error);
-      res.status(500).json({
-        success: false,
-        error: "Registration failed",
-      });
+      return sendError(res, 500, "REGISTRATION_FAILED", "Registration failed");
     }
   }
 );
@@ -95,10 +103,13 @@ router.post("/login", validateLogin, async (req: Request, res: Response): Promis
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array(),
-      });
+      return sendError(
+        res,
+        400,
+        "VALIDATION_ERROR",
+        "Request validation failed",
+        errors.array()
+      );
     }
 
     const { email, password } = req.body;
@@ -106,46 +117,27 @@ router.post("/login", validateLogin, async (req: Request, res: Response): Promis
     // Find user
     const user = await userRepository.findOne({ where: { email } });
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: "Invalid credentials",
-      });
+      return sendError(res, 401, "INVALID_CREDENTIALS", "Invalid email or password");
     }
 
     // Check password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
-      return res.status(401).json({
-        success: false,
-        error: "Invalid credentials",
-      });
+      return sendError(res, 401, "INVALID_CREDENTIALS", "Invalid email or password");
     }
 
-    // Generate JWT token
-    // @ts-ignore - TypeScript has issues with jwt.sign overloads
-    const token = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_SECRET || "fallback-secret",
-      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
-    );
-
-    // Remove password from response
-    const { password: _, ...userWithoutPassword } = user;
+    const token = signAccessToken(user);
 
     res.json({
       success: true,
-      message: "Login successful",
       data: {
-        user: userWithoutPassword,
+        user: publicUser(user),
         token,
       },
     });
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({
-      success: false,
-      error: "Login failed",
-    });
+    return sendError(res, 500, "LOGIN_FAILED", "Login failed");
   }
 });
 
@@ -156,26 +148,23 @@ router.get(
   async (req: AuthRequest, res: Response): Promise<any> => {
     try {
       if (!req.user) {
-        return res.status(401).json({
-          success: false,
-          error: "User not authenticated",
-        });
+        return sendError(
+          res,
+          401,
+          "AUTHENTICATION_REQUIRED",
+          "A valid bearer token is required"
+        );
       }
-
-      const { password: _, ...userWithoutPassword } = req.user;
 
       res.json({
         success: true,
         data: {
-          user: userWithoutPassword,
+          user: publicUser(req.user),
         },
       });
     } catch (error) {
       console.error("Profile fetch error:", error);
-      res.status(500).json({
-        success: false,
-        error: "Failed to fetch profile",
-      });
+      return sendError(res, 500, "PROFILE_FETCH_FAILED", "Failed to fetch profile");
     }
   }
 );
@@ -187,19 +176,15 @@ router.post(
   async (req: AuthRequest, res: Response): Promise<any> => {
     try {
       if (!req.user) {
-        return res.status(401).json({
-          success: false,
-          error: "User not authenticated",
-        });
+        return sendError(
+          res,
+          401,
+          "AUTHENTICATION_REQUIRED",
+          "A valid bearer token is required"
+        );
       }
 
-      // Generate new token
-      // @ts-ignore - TypeScript has issues with jwt.sign overloads
-      const token = jwt.sign(
-        { userId: req.user.id },
-        process.env.JWT_SECRET || "fallback-secret",
-        { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
-      );
+      const token = signAccessToken(req.user);
 
       res.json({
         success: true,
@@ -207,10 +192,7 @@ router.post(
       });
     } catch (error) {
       console.error("Token refresh error:", error);
-      res.status(500).json({
-        success: false,
-        error: "Token refresh failed",
-      });
+      return sendError(res, 500, "TOKEN_REFRESH_FAILED", "Token refresh failed");
     }
   }
 );
@@ -234,10 +216,13 @@ router.post(
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res.status(400).json({
-          success: false,
-          errors: errors.array(),
-        });
+        return sendError(
+          res,
+          400,
+          "VALIDATION_ERROR",
+          "Request validation failed",
+          errors.array()
+        );
       }
 
       const { email, password } = req.body;
@@ -245,54 +230,43 @@ router.post(
       // Find user
       const user = await userRepository.findOne({ where: { email } });
       if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: "Invalid admin credentials",
-        });
+        return sendError(
+          res,
+          401,
+          "INVALID_CREDENTIALS",
+          "Invalid email or password"
+        );
       }
 
       // Check if user has admin role
       if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN) {
-        return res.status(403).json({
-          success: false,
-          error: "Admin access denied. This login is only for administrators.",
-        });
+        return sendError(res, 403, "ADMIN_ACCESS_REQUIRED", "Admin access is required");
       }
 
       // Check password
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
-        return res.status(401).json({
-          success: false,
-          error: "Invalid admin credentials",
-        });
+        return sendError(
+          res,
+          401,
+          "INVALID_CREDENTIALS",
+          "Invalid email or password"
+        );
       }
 
-      // Generate JWT token
-      // @ts-ignore - TypeScript has issues with jwt.sign overloads
-      const token = jwt.sign(
-        { userId: user.id, role: user.role },
-        process.env.JWT_SECRET || "fallback-secret",
-        { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
-      );
-
-      // Remove password from response
-      const { password: _, ...userWithoutPassword } = user;
+      const token = signAccessToken(user);
 
       res.json({
         success: true,
         message: "Admin login successful",
         data: {
-          user: userWithoutPassword,
+          user: publicUser(user),
           token,
         },
       });
     } catch (error) {
       console.error("Admin login error:", error);
-      res.status(500).json({
-        success: false,
-        error: "Admin login failed",
-      });
+      return sendError(res, 500, "ADMIN_LOGIN_FAILED", "Admin login failed");
     }
   }
 );
