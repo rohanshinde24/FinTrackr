@@ -5,6 +5,8 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  Check,
+  Index,
 } from "typeorm";
 import { Account } from "./Account";
 import { Transaction } from "./Transaction";
@@ -19,6 +21,8 @@ export enum UserRole {
 }
 
 @Entity("users")
+@Index("UQ_users_email_lower", { synchronize: false })
+@Check("CHK_users_default_currency", `"defaultCurrency" ~ '^[A-Z]{3}$'`)
 export class User {
   @PrimaryGeneratedColumn("uuid")
   id: string;

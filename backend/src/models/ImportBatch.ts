@@ -7,6 +7,7 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
+  Check,
 } from "typeorm";
 import { Transaction } from "./Transaction";
 import { User } from "./User";
@@ -19,6 +20,10 @@ export enum ImportBatchStatus {
 
 @Entity("import_batches")
 @Index(["userId", "idempotencyKey"], { unique: true })
+@Check(
+  "CHK_import_batches_counts",
+  `"acceptedCount" >= 0 AND "rejectedCount" >= 0 AND "duplicateCount" >= 0`
+)
 export class ImportBatch {
   @PrimaryGeneratedColumn("uuid")
   id: string;

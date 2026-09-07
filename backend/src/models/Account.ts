@@ -8,6 +8,7 @@ import {
   OneToMany,
   JoinColumn,
   Index,
+  Check,
 } from "typeorm";
 import { User } from "./User";
 import { Transaction } from "./Transaction";
@@ -29,6 +30,7 @@ export enum AccountStatus {
 
 @Entity("accounts")
 @Index(["userId"])
+@Check("CHK_accounts_currency", `"currency" ~ '^[A-Z]{3}$'`)
 export class Account {
   @PrimaryGeneratedColumn("uuid")
   id: string;

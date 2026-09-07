@@ -20,6 +20,7 @@ export enum CategoryType {
 
 @Entity("categories")
 @Index(["userId", "type"])
+@Index("UQ_categories_active_name", { synchronize: false })
 export class Category {
   @PrimaryGeneratedColumn("uuid")
   id: string;

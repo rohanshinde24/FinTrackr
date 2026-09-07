@@ -7,6 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
   Index,
+  Check,
 } from "typeorm";
 import { User } from "./User";
 import { Category } from "./Category";
@@ -14,6 +15,9 @@ import { Category } from "./Category";
 @Entity("budgets")
 @Index(["userId", "startDate"])
 @Index(["userId", "categoryId", "startDate"], { unique: true })
+@Check("CHK_budgets_positive_amount", `"amount" > 0`)
+@Check("CHK_budgets_date_range", `"endDate" > "startDate"`)
+@Check("CHK_budgets_warning_threshold", `"warningThreshold" BETWEEN 0 AND 100`)
 export class Budget {
   @PrimaryGeneratedColumn("uuid")
   id: string;
