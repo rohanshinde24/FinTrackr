@@ -7,9 +7,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "nodemon src/index.ts",
-    "test": "jest",
+    "test": "jest --runInBand",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test:coverage": "jest --runInBand --coverage",
     "db:migrate": "ts-node src/config/database.ts",
     "db:generate": "typeorm migration:generate -n",
     "db:create": "typeorm migration:create -n"
