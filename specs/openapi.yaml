@@ -719,6 +719,10 @@ components:
       type: string
       pattern: "^[0-9]{1,13}(\\.[0-9]{1,2})?$"
       examples: ["42.50"]
+    PositiveDecimalAmount:
+      type: string
+      pattern: "^(?=.*[1-9])[0-9]{1,13}(\\.[0-9]{1,2})?$"
+      examples: ["42.50"]
     SignedDecimalAmount:
       type: string
       pattern: "^-?[0-9]{1,13}(\\.[0-9]{1,2})?$"
@@ -1010,7 +1014,7 @@ components:
         status:
           $ref: "#/components/schemas/TransactionStatus"
         amount:
-          $ref: "#/components/schemas/DecimalAmount"
+          $ref: "#/components/schemas/PositiveDecimalAmount"
         date:
           type: string
           format: date
@@ -1042,7 +1046,7 @@ components:
         type:
           $ref: "#/components/schemas/TransactionType"
         amount:
-          $ref: "#/components/schemas/DecimalAmount"
+          $ref: "#/components/schemas/PositiveDecimalAmount"
         date:
           type: string
           format: date
@@ -1069,7 +1073,7 @@ components:
         status:
           $ref: "#/components/schemas/TransactionStatus"
         amount:
-          $ref: "#/components/schemas/DecimalAmount"
+          $ref: "#/components/schemas/PositiveDecimalAmount"
         date:
           type: string
           format: date
@@ -1118,7 +1122,7 @@ components:
         name:
           type: string
         amount:
-          $ref: "#/components/schemas/DecimalAmount"
+          $ref: "#/components/schemas/PositiveDecimalAmount"
         month:
           type: string
           pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
@@ -1145,7 +1149,7 @@ components:
           minLength: 1
           maxLength: 100
         amount:
-          $ref: "#/components/schemas/DecimalAmount"
+          $ref: "#/components/schemas/PositiveDecimalAmount"
         month:
           type: string
           pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
