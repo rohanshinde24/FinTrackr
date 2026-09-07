@@ -20,15 +20,16 @@ planned behavior.
 | Registration, login, profile, and correlated auth errors | Complete | PostgreSQL integration tests |
 | Versioned PostgreSQL schema migrations | Complete | [`backend/src/migrations/`](backend/src/migrations) |
 | React dashboard shell and responsive component tests | Complete | 24 component tests |
-| Account, category, transaction, and budget APIs | Not implemented | Contract and acceptance scenarios ready |
-| Calculated dashboard analytics | Not implemented | The current backend dashboard response is fixture data |
+| Account, category, transaction, and budget APIs | Complete | PostgreSQL integration tests cover CRUD, invariants, and tenant isolation |
+| Calculated dashboard analytics | Complete | Reconciliation test covers balances, cash flow, categories, budgets, and trends |
+| Login and finance-management UI workflows | Not implemented | Dashboard shell exists; authenticated forms and routes remain |
 | Idempotent streaming CSV import and 100K benchmark | Not implemented | Planned after transaction workflow |
 | Cloud Run, Firebase Hosting, and Neon release workflow | Not configured | CI gates are ready; cloud resources and credentials remain |
 
-Current measured coverage is 61.71% statements for the backend and 91.47%
+Current measured coverage is 77.07% statements for the backend and 91.47%
 statements for the frontend. CI enforces the backend baseline so it cannot
 silently regress. The backend target remains at least 90% meaningful coverage
-after the MVP routes replace the remaining placeholders.
+after the remaining import and operational behavior is implemented.
 
 ## Architecture
 
@@ -148,7 +149,7 @@ The intended low-cost production-shaped deployment is:
   long-lived cloud keys
 
 Deployment is not yet enabled. Before calling the application production-ready,
-the repository still needs the domain APIs, calculated analytics, import and
+the repository still needs authenticated frontend workflows, the import and
 100K-transaction benchmark, cloud infrastructure configuration, secret-store
 wiring, a migration release job, and post-deploy smoke checks.
 
