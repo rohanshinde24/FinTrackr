@@ -7,6 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
   Index,
+  Check,
 } from "typeorm";
 import { User } from "./User";
 import { Account } from "./Account";
@@ -29,6 +30,7 @@ export enum TransactionStatus {
 @Index(["accountId", "date", "id"])
 @Index(["userId", "categoryId", "date"])
 @Index(["userId", "importFingerprint"], { unique: true })
+@Check("CHK_transactions_positive_amount", `"amount" > 0`)
 export class Transaction {
   @PrimaryGeneratedColumn("uuid")
   id: string;
