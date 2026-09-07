@@ -1,7 +1,12 @@
 import { NextFunction, Response, Router } from "express";
-import { body, param, validationResult } from "express-validator";
+import { body, param } from "express-validator";
 import { sendError } from "../http/respond";
 import { authenticateToken, AuthRequest } from "../middleware/auth";
+import {
+  rejectUnknownFields,
+  requireNonEmptyBody,
+  sendValidationErrors,
+} from "../middleware/requestValidation";
 import { AccountStatus, AccountType } from "../models/Account";
 import {
   AccountServiceError,
@@ -19,19 +24,6 @@ const currency = /^[A-Z]{3}$/;
 const createFields = ["name", "institution", "type", "openingBalance", "currency"];
 const updateFields = ["name", "institution", "status"];
 
-const rejectUnknownFields = (allowedFields: string[]) =>
-  body().custom((value) => {
-    if (
-      !value ||
-      typeof value !== "object" ||
-      Array.isArray(value) ||
-      Object.keys(value).some((field) => !allowedFields.includes(field))
-    ) {
-      throw new Error("Request body contains unsupported fields");
-    }
-    return true;
-  });
-
 const validateCreate = [
   rejectUnknownFields(createFields),
   body("name").isString().trim().notEmpty().isLength({ max: 100 }),
@@ -43,12 +35,7 @@ const validateCreate = [
 
 const validateUpdate = [
   rejectUnknownFields(updateFields),
-  body().custom((value) => {
-    if (!value || Object.keys(value).length === 0) {
-      throw new Error("Request body must contain at least one field");
-    }
-    return true;
-  }),
+  requireNonEmptyBody(),
   body("name").optional().isString().trim().notEmpty().isLength({ max: 100 }),
   body("institution")
     .optional({ nullable: true })
@@ -59,20 +46,6 @@ const validateUpdate = [
 ];
 
 const validateAccountId = [param("accountId").isUUID()];
-
-const handleValidation = (req: AuthRequest, res: Response): Response | undefined => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return sendError(
-      res,
-      400,
-      "VALIDATION_ERROR",
-      "Request validation failed",
-      errors.array()
-    );
-  }
-  return undefined;
-};
 
 const handleRouteError = (
   error: unknown,
@@ -100,7 +73,7 @@ router.post(
   "/",
   validateCreate,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
-    const validationResponse = handleValidation(req, res);
+    const validationResponse = sendValidationErrors(req, res);
     if (validationResponse) return validationResponse;
 
     try {
@@ -122,7 +95,7 @@ router.get(
   "/:accountId",
   validateAccountId,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
-    const validationResponse = handleValidation(req, res);
+    const validationResponse = sendValidationErrors(req, res);
     if (validationResponse) return validationResponse;
 
     try {
@@ -138,7 +111,7 @@ router.patch(
   "/:accountId",
   [...validateAccountId, ...validateUpdate],
   async (req: AuthRequest, res: Response, next: NextFunction) => {
-    const validationResponse = handleValidation(req, res);
+    const validationResponse = sendValidationErrors(req, res);
     if (validationResponse) return validationResponse;
 
     try {
@@ -158,7 +131,7 @@ router.delete(
   "/:accountId",
   validateAccountId,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
-    const validationResponse = handleValidation(req, res);
+    const validationResponse = sendValidationErrors(req, res);
     if (validationResponse) return validationResponse;
 
     try {
