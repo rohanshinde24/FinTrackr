@@ -5,6 +5,7 @@ import { Account } from "../models/Account";
 import { Transaction } from "../models/Transaction";
 import { Category } from "../models/Category";
 import { Budget } from "../models/Budget";
+import { ImportBatch } from "../models/ImportBatch";
 
 // Load environment variables
 config();
@@ -18,7 +19,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || "fintrackr_db",
   synchronize: process.env.NODE_ENV === "development",
   logging: process.env.NODE_ENV === "development",
-  entities: [User, Account, Transaction, Category, Budget],
+  entities: [User, Account, Transaction, Category, Budget, ImportBatch],
   migrations: ["src/migrations/*.ts"],
   subscribers: ["src/subscribers/*.ts"],
   ssl:

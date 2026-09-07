@@ -10,6 +10,13 @@ import { sendError } from "../http/respond";
 const router = Router();
 const userRepository = AppDataSource.getRepository(User);
 
+const findUserForAuthentication = (email: string): Promise<User | null> =>
+  userRepository
+    .createQueryBuilder("user")
+    .addSelect("user.passwordHash")
+    .where("user.email = :email", { email })
+    .getOne();
+
 const publicUser = (user: User) => ({
   id: user.id,
   email: user.email,
@@ -75,7 +82,7 @@ router.post(
       // Create user
       const user = userRepository.create({
         email,
-        password: hashedPassword,
+        passwordHash: hashedPassword,
         firstName,
         lastName,
       });
@@ -115,13 +122,13 @@ router.post("/login", validateLogin, async (req: Request, res: Response): Promis
     const { email, password } = req.body;
 
     // Find user
-    const user = await userRepository.findOne({ where: { email } });
+    const user = await findUserForAuthentication(email);
     if (!user) {
       return sendError(res, 401, "INVALID_CREDENTIALS", "Invalid email or password");
     }
 
     // Check password
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
     if (!isValidPassword) {
       return sendError(res, 401, "INVALID_CREDENTIALS", "Invalid email or password");
     }
@@ -228,7 +235,7 @@ router.post(
       const { email, password } = req.body;
 
       // Find user
-      const user = await userRepository.findOne({ where: { email } });
+      const user = await findUserForAuthentication(email);
       if (!user) {
         return sendError(
           res,
@@ -244,7 +251,7 @@ router.post(
       }
 
       // Check password
-      const isValidPassword = await bcrypt.compare(password, user.password);
+      const isValidPassword = await bcrypt.compare(password, user.passwordHash);
       if (!isValidPassword) {
         return sendError(
           res,

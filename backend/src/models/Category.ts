@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
   ManyToOne,
   OneToMany,
   JoinColumn,
@@ -15,10 +16,10 @@ import { Budget } from "./Budget";
 export enum CategoryType {
   INCOME = "INCOME",
   EXPENSE = "EXPENSE",
-  TRANSFER = "TRANSFER",
 }
 
 @Entity("categories")
+@Index(["userId", "type"])
 export class Category {
   @PrimaryGeneratedColumn("uuid")
   id: string;
@@ -44,11 +45,11 @@ export class Category {
   @Column({ default: 0 })
   sortOrder: number;
 
-  @Column({ type: "jsonb", nullable: true })
-  metadata?: Record<string, any>;
-
   @Column({ nullable: false })
   userId: string;
+
+  @Column({ type: "timestamp with time zone", nullable: true })
+  archivedAt?: Date;
 
   @CreateDateColumn()
   createdAt: Date;
@@ -57,7 +58,7 @@ export class Category {
   updatedAt: Date;
 
   // Relationships
-  @ManyToOne(() => User, (user) => user.accounts)
+  @ManyToOne(() => User, (user) => user.categories, { onDelete: "CASCADE" })
   @JoinColumn({ name: "userId" })
   user: User;
 

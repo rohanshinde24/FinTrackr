@@ -9,6 +9,8 @@ import {
 import { Account } from "./Account";
 import { Transaction } from "./Transaction";
 import { Budget } from "./Budget";
+import { Category } from "./Category";
+import { ImportBatch } from "./ImportBatch";
 
 export enum UserRole {
   USER = "USER",
@@ -24,8 +26,8 @@ export class User {
   @Column({ unique: true, nullable: false })
   email: string;
 
-  @Column({ nullable: false })
-  password: string;
+  @Column({ nullable: false, select: false })
+  passwordHash: string;
 
   @Column({ nullable: false })
   firstName: string;
@@ -69,4 +71,10 @@ export class User {
 
   @OneToMany(() => Budget, (budget) => budget.user)
   budgets: Budget[];
+
+  @OneToMany(() => Category, (category) => category.user)
+  categories: Category[];
+
+  @OneToMany(() => ImportBatch, (importBatch) => importBatch.user)
+  importBatches: ImportBatch[];
 }
