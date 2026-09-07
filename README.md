@@ -1,418 +1,163 @@
-# FinTrackr - Personal Finance Management System
+# FinTrackr
 
-A comprehensive personal finance management application built with React, Node.js, TypeScript, and PostgreSQL. Features enterprise-grade testing with 90%+ backend coverage, WCAG-compliant accessibility, and automated Azure deployment via GitHub Actions.
+FinTrackr is a portfolio-grade personal finance application for managing
+accounts, income, expenses, categories, and monthly budgets. It is being built
+contract-first as a modular monolith: a React/Vite client, a Node.js/Express
+API, and PostgreSQL as the system of record.
 
-## Features
+The repository is under active implementation. The specifications describe the
+accepted MVP; the status table below distinguishes implemented behavior from
+planned behavior.
 
-- 📊 **Dashboard Overview** - Get a complete view of your financial health
-- 💳 **Transaction Management** - Track income and expenses with categories
-- 🏦 **Account Management** - Manage multiple bank accounts and credit cards
-- 📈 **Budget Tracking** - Set and monitor budgets with progress indicators
-- 📋 **Reports & Analytics** - Detailed financial reports and spending trends
-- 🔐 **Secure Authentication** - JWT-based authentication system with rate limiting
-- 📱 **Responsive Design** - Mobile-first design that works seamlessly across all devices
-- ♿ **Accessibility-First** - WCAG 2.1 AA compliant with semantic HTML and ARIA labels
-- 🧪 **90%+ Test Coverage** - Comprehensive unit and integration tests for reliability
+## Current status
 
-## Tech Stack
+| Capability | Status | Evidence |
+| --- | --- | --- |
+| Product, architecture, data, and acceptance specs | Complete | [`specs/`](specs) |
+| OpenAPI 3.1 contract and linting | Complete | [`specs/openapi.yaml`](specs/openapi.yaml) |
+| Node 22 runtime and production API image | Complete | [`.nvmrc`](.nvmrc), [`backend/Dockerfile`](backend/Dockerfile) |
+| Versioned API, health, readiness, and graceful shutdown | Complete | [`backend/src/app.ts`](backend/src/app.ts) |
+| Registration, login, profile, and correlated auth errors | Complete | PostgreSQL integration tests |
+| Versioned PostgreSQL schema migrations | Complete | [`backend/src/migrations/`](backend/src/migrations) |
+| React dashboard shell and responsive component tests | Complete | 24 component tests |
+| Account, category, transaction, and budget APIs | Not implemented | Contract and acceptance scenarios ready |
+| Calculated dashboard analytics | Not implemented | The current backend dashboard response is fixture data |
+| Idempotent streaming CSV import and 100K benchmark | Not implemented | Planned after transaction workflow |
+| Cloud Run, Firebase Hosting, and Neon release workflow | Not configured | CI gates are ready; cloud resources and credentials remain |
 
-### Frontend
+Current measured coverage is 61.71% statements for the backend and 91.47%
+statements for the frontend. CI enforces the backend baseline so it cannot
+silently regress. The backend target remains at least 90% meaningful coverage
+after the MVP routes replace the remaining placeholders.
 
-- React 18 with TypeScript
-- Tailwind CSS for styling
-- React Router for navigation
-- Axios for API calls
-- Recharts for data visualization
-- Lucide React for icons
+## Architecture
 
-### Backend
-
-- Node.js with Express
-- TypeScript
-- PostgreSQL with TypeORM
-- JWT authentication
-- Express validation & sanitization
-- Helmet security headers
-- Rate limiting and CORS middleware
-- 90%+ test coverage with Jest and Supertest
-- Normalized database schema
-
-### DevOps & Testing
-
-- Docker & Docker Compose for containerization
-- GitHub Actions CI/CD pipeline
-- Automated deployment to Azure App Services (70% faster deployment)
-- Jest for backend testing (90%+ coverage)
-- React Testing Library for frontend testing
-- Lighthouse CI for performance monitoring
-- Automated security scanning with Snyk
-- PostgreSQL 15 database
-
-## Quick Start
-
-### Prerequisites
-
-- Node.js 18+
-- PostgreSQL 15+
-- Docker (optional)
-
-### Option 1: Using Docker (Recommended)
-
-1. Clone the repository:
-
-```bash
-git clone <repository-url>
-cd FinTrackr
+```text
+Browser
+  +-- React/Vite static application -- Firebase Hosting
+  +-- HTTPS /api/v1 ----------------- Express API on Cloud Run
+                                             |
+                                             +-- PostgreSQL on Neon
 ```
 
-2. Start all services with Docker Compose:
+The backend is a modular monolith. HTTP routes own transport concerns,
+services own business rules, and TypeORM owns persistence. Every user-owned
+query must derive `userId` from the verified bearer token; a client-supplied
+owner ID is never trusted.
+
+Balances, spending totals, and budget progress are derived from completed
+transactions. They are not independently mutable values. Money is stored as
+`numeric(15,2)` and returned as decimal strings, avoiding binary floating-point
+rounding in the API contract.
+
+See [`specs/architecture.md`](specs/architecture.md) and
+[`specs/data-model.md`](specs/data-model.md) for the decisions and invariants.
+
+## Local development
+
+Prerequisites:
+
+- Node.js 22
+- Docker Desktop with Compose, or PostgreSQL 16 for a manual setup
+
+Start the complete local stack:
 
 ```bash
-docker-compose up -d
+docker compose up --build
 ```
 
-This will start:
+Compose waits for PostgreSQL, applies pending migrations, then starts the API
+and Vite development servers:
 
-- PostgreSQL database on port 5432
-- Backend API on port 3001
-- Frontend React app on port 3000
+- frontend: `http://localhost:3000`
+- API: `http://localhost:3001/api/v1`
+- liveness: `http://localhost:3001/health`
+- readiness: `http://localhost:3001/ready`
 
-### Option 2: Manual Setup
-
-1. **Setup Database**
-
-```bash
-# Install PostgreSQL and create database
-createdb fintrackr_db
-```
-
-2. **Setup Backend**
+For a manual setup, create `backend/.env` from the example and provide a local
+PostgreSQL database:
 
 ```bash
 cd backend
-npm install
-cp env.example .env
-# Edit .env with your database credentials
+cp .env.example .env
+npm ci
+npm run db:migrate
 npm run dev
 ```
 
-3. **Setup Frontend**
+In a second terminal:
 
 ```bash
 cd frontend
-npm install
-npm start
+cp .env.example .env
+npm ci
+npm run dev
 ```
 
-## Environment Variables
+## Verification
 
-### Backend (.env)
-
-```env
-PORT=3001
-NODE_ENV=development
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=fintrackr_db
-DB_USER=fintrackr_user
-DB_PASSWORD=fintrackr_password
-JWT_SECRET=your-super-secret-jwt-key-here
-JWT_EXPIRES_IN=7d
-CORS_ORIGIN=http://localhost:3000
-```
-
-## API Endpoints
-
-### Authentication
-
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - User login
-- `GET /api/auth/profile` - Get user profile
-- `POST /api/auth/refresh` - Refresh JWT token
-
-### Dashboard
-
-- `GET /api/dashboard/overview` - Get dashboard overview
-- `GET /api/dashboard/trends` - Get spending trends
-
-### Transactions
-
-- `GET /api/transactions` - Get all transactions
-- `POST /api/transactions` - Create new transaction
-- `PUT /api/transactions/:id` - Update transaction
-- `DELETE /api/transactions/:id` - Delete transaction
-
-### Accounts
-
-- `GET /api/accounts` - Get all accounts
-- `POST /api/accounts` - Create new account
-- `PUT /api/accounts/:id` - Update account
-- `DELETE /api/accounts/:id` - Delete account
-
-### Budgets
-
-- `GET /api/budgets` - Get all budgets
-- `POST /api/budgets` - Create new budget
-- `PUT /api/budgets/:id` - Update budget
-- `DELETE /api/budgets/:id` - Delete budget
-
-## Development
-
-### Backend Development
+Backend checks require a disposable PostgreSQL database configured through the
+`DB_*` variables:
 
 ```bash
 cd backend
-npm run dev          # Start development server with hot reload
-npm run build        # Build TypeScript to JavaScript
-npm test            # Run test suite
-npm run test:coverage # Run tests with coverage report (target: 90%+)
-npm run test:watch   # Run tests in watch mode
+npm run lint:openapi
+npm run typecheck
+npm run db:migrate
+npm run test:coverage
+npm run build
 ```
 
-### Frontend Development
+Frontend checks are self-contained:
 
 ```bash
 cd frontend
-npm start           # Start development server (localhost:3000)
-npm run build       # Build optimized production bundle
-npm test           # Run React tests with Jest
-npm test -- --coverage # Run tests with coverage report
+npm run typecheck
+npm run test:coverage
+npm run build
 ```
 
-## Testing
+GitHub Actions runs these checks on pull requests and additionally builds the
+production API image. Production dependency audits fail on high or critical
+advisories.
 
-### Backend Testing
+## Spec-driven workflow
 
-The backend has comprehensive test coverage (90%+) including:
+Each feature follows the same reviewable sequence:
 
-- **Unit Tests**: Individual function and class testing
-- **Integration Tests**: API endpoint testing with Supertest
-- **Database Tests**: TypeORM model and relationship testing
-- **Middleware Tests**: Authentication and error handling tests
+1. Confirm the business rule in `specs/product.md` or `specs/data-model.md`.
+2. Update the OpenAPI contract before changing HTTP behavior.
+3. Add or refine an acceptance scenario.
+4. Write a failing test against the real application boundary.
+5. Implement the smallest route/service/persistence change that passes it.
+6. Run type, test, migration, build, and audit checks.
+7. Commit one measurable concern with a Conventional Commit message.
 
-```bash
-cd backend
-npm test                  # Run all tests
-npm run test:coverage     # Generate coverage report
-npm run test:watch        # Watch mode for development
-```
+This sequence makes interview explanations concrete: the contract defines what
+clients may rely on, acceptance tests prove behavior, migrations make schema
+changes repeatable, and small commits show how risk was controlled.
 
-Coverage thresholds enforced:
-- Statements: 90%
-- Branches: 90%
-- Functions: 90%
-- Lines: 90%
+## Deployment target
 
-### Frontend Testing
+The intended low-cost production-shaped deployment is:
 
-Frontend tests use React Testing Library and Jest:
+- Firebase Hosting for the immutable frontend bundle
+- Google Cloud Run for the containerized API
+- Neon PostgreSQL for managed persistence
+- GitHub Actions with Google Cloud Workload Identity Federation instead of
+  long-lived cloud keys
 
-- **Component Tests**: UI component rendering and behavior
-- **Accessibility Tests**: ARIA labels and semantic HTML validation
-- **Integration Tests**: User interaction flows
+Deployment is not yet enabled. Before calling the application production-ready,
+the repository still needs the domain APIs, calculated analytics, import and
+100K-transaction benchmark, cloud infrastructure configuration, secret-store
+wiring, a migration release job, and post-deploy smoke checks.
 
-```bash
-cd frontend
-npm test                          # Run all tests
-npm test -- --coverage            # Generate coverage report
-npm test -- --coverage --watchAll=false  # CI mode
-```
+## API conventions
 
-## Database Schema
+- All public endpoints are under `/api/v1`.
+- Protected routes require `Authorization: Bearer <token>`.
+- Errors use a stable envelope with `code`, `message`, and `requestId`.
+- Collection endpoints use deterministic cursor pagination.
+- `/health` checks process liveness; `/ready` checks PostgreSQL connectivity.
 
-The application uses a normalized PostgreSQL schema with the following entities:
-
-- **Users** - User accounts and profiles (bcrypt hashed passwords)
-- **Accounts** - Bank accounts, credit cards, savings (one-to-many with Users)
-- **Transactions** - Income and expense transactions (linked to Accounts and Categories)
-- **Categories** - Transaction categories (customizable per user)
-- **Budgets** - Budget tracking with period-based limits (weekly, monthly, yearly)
-
-All tables include:
-- Primary keys with auto-increment
-- Foreign key constraints for referential integrity
-- Timestamps (createdAt, updatedAt)
-- Proper indexes for performance
-
-## Deployment
-
-### Azure App Services (Production)
-
-The application is configured for automated deployment to Azure App Services via GitHub Actions.
-
-#### Prerequisites
-1. Azure account with active subscription
-2. Two App Services created (backend + frontend)
-3. Azure PostgreSQL Flexible Server
-4. GitHub repository secrets configured
-
-#### Deployment Process
-
-**Automatic Deployment:**
-- Push to `main` branch triggers GitHub Actions workflow
-- Runs tests, builds, and deploys to Azure
-- Backend deployed to `https://<app-name>.azurewebsites.net`
-- Frontend deployed to `https://<app-name>.azurewebsites.net`
-- Lighthouse performance audit runs post-deployment
-
-**Manual Deployment:**
-```bash
-# See .azure/deploy-instructions.md for detailed steps
-az webapp up --name fintrackr-backend --resource-group fintrackr-rg
-az webapp up --name fintrackr-frontend --resource-group fintrackr-rg
-```
-
-#### GitHub Secrets Required
-
-Add these secrets in your GitHub repository (Settings → Secrets):
-
-- `AZURE_BACKEND_APP_NAME` - Backend app service name
-- `AZURE_FRONTEND_APP_NAME` - Frontend app service name
-- `AZURE_BACKEND_PUBLISH_PROFILE` - Backend publish profile (XML)
-- `AZURE_FRONTEND_PUBLISH_PROFILE` - Frontend publish profile (XML)
-- `AZURE_BACKEND_URL` - Backend URL for frontend API calls
-- `SNYK_TOKEN` - Snyk security scanning token (optional)
-
-#### Deployment Time Improvement
-
-Optimizations that reduce deployment time by ~70%:
-- Cached npm dependencies in GitHub Actions
-- Parallel build processes
-- Multi-stage Docker builds with layer caching
-- Optimized production builds
-- Azure CDN for static assets
-
-### Local Deployment with Docker
-
-```bash
-# Build and start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-```
-
-## CI/CD Pipeline
-
-The GitHub Actions workflow includes:
-
-1. **Testing** - Backend and frontend unit/integration tests
-2. **Type Checking** - TypeScript compilation validation
-3. **Security Scanning** - Snyk vulnerability detection
-4. **Docker Build** - Container image building and testing
-5. **Azure Deployment** - Automated deployment to production
-6. **Lighthouse Audit** - Performance and accessibility scoring
-7. **Notifications** - Automated PR comments with results
-
-## Accessibility
-
-FinTrackr follows WCAG 2.1 Level AA guidelines:
-
-- ✅ Semantic HTML5 elements (`header`, `nav`, `main`, `section`, `aside`)
-- ✅ ARIA labels and roles for all interactive elements
-- ✅ Keyboard navigation support (focus indicators)
-- ✅ Screen reader compatibility
-- ✅ Color contrast ratios meet AA standards
-- ✅ Responsive text sizing
-- ✅ Alt text for images
-- ✅ Form labels and error messages
-- ✅ Skip to main content link
-- ✅ Progress indicators with ARIA attributes
-
-## Performance
-
-- Lighthouse Score: 95+ (Performance, Accessibility, Best Practices)
-- First Contentful Paint: < 1.5s
-- Time to Interactive: < 3.5s
-- Optimized bundle sizes with code splitting
-- Lazy loading for routes and components
-
-## Security
-
-- JWT-based authentication with secure httpOnly cookies
-- Bcrypt password hashing (10 rounds)
-- Helmet.js security headers
-- Rate limiting on API endpoints
-- CORS configuration
-- SQL injection prevention via TypeORM parameterized queries
-- XSS protection
-- Input validation and sanitization
-- Environment variable management
-- Regular dependency updates via Dependabot
-
-## Project Structure
-
-```
-FinTrackr/
-├── backend/
-│   ├── src/
-│   │   ├── config/        # Database configuration
-│   │   ├── middleware/    # Auth, error handling
-│   │   ├── models/        # TypeORM entities
-│   │   ├── routes/        # API routes
-│   │   └── index.ts       # Entry point
-│   ├── __tests__/         # Test files (90%+ coverage)
-│   ├── Dockerfile
-│   ├── jest.config.js
-│   └── package.json
-├── frontend/
-│   ├── src/
-│   │   ├── components/    # React components
-│   │   ├── App.tsx
-│   │   └── index.tsx
-│   ├── public/
-│   ├── Dockerfile
-│   └── package.json
-├── .github/
-│   └── workflows/
-│       └── ci.yml         # CI/CD pipeline
-├── .azure/                # Azure deployment configs
-├── docker-compose.yml
-└── README.md
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Add tests (maintain 90%+ coverage)
-5. Ensure all tests pass (`npm test`)
-6. Commit with conventional commits (`git commit -m 'feat: add amazing feature'`)
-7. Push to branch (`git push origin feature/amazing-feature`)
-8. Open a Pull Request
-
-### Development Guidelines
-
-- Write tests for all new features
-- Follow TypeScript best practices
-- Maintain accessibility standards (WCAG 2.1 AA)
-- Use semantic HTML
-- Add proper error handling
-- Document complex functions
-- Keep components small and focused
-
-## License
-
-MIT License - see LICENSE file for details
-
-## Author
-
-**Rohan Shinde**
-
-## Support
-
-For support and questions:
-- Open an issue on GitHub
-- Check existing documentation in `.azure/deploy-instructions.md`
-- Review API documentation in README
-
-## Acknowledgments
-
-- Built with TypeScript, React, Node.js, and PostgreSQL
-- Deployed on Azure App Services
-- CI/CD with GitHub Actions
-- Testing with Jest and React Testing Library
+The executable contract is [`specs/openapi.yaml`](specs/openapi.yaml).
