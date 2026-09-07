@@ -1168,7 +1168,7 @@ components:
           minLength: 1
           maxLength: 100
         amount:
-          $ref: "#/components/schemas/DecimalAmount"
+          $ref: "#/components/schemas/PositiveDecimalAmount"
         warningThreshold:
           type: number
           minimum: 0
