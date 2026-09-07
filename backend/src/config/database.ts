@@ -1,5 +1,6 @@
 import { DataSource } from "typeorm";
 import { config } from "dotenv";
+import { join } from "path";
 import { User } from "../models/User";
 import { Account } from "../models/Account";
 import { Transaction } from "../models/Transaction";
@@ -12,19 +13,22 @@ config();
 
 export const AppDataSource = new DataSource({
   type: "postgres",
-  host: process.env.DB_HOST || "localhost",
-  port: parseInt(process.env.DB_PORT || "5432"),
-  username: process.env.DB_USER || "fintrackr_user",
-  password: process.env.DB_PASSWORD || "fintrackr_password",
-  database: process.env.DB_NAME || "fintrackr_db",
-  synchronize: process.env.NODE_ENV === "development",
-  logging: process.env.NODE_ENV === "development",
+  ...(process.env.DATABASE_URL
+    ? { url: process.env.DATABASE_URL }
+    : {
+        host: process.env.DB_HOST || "localhost",
+        port: Number.parseInt(process.env.DB_PORT || "5432", 10),
+        username: process.env.DB_USER || "fintrackr_user",
+        password: process.env.DB_PASSWORD || "fintrackr_password",
+        database: process.env.DB_NAME || "fintrackr_db",
+      }),
+  synchronize: false,
+  logging: process.env.DB_LOGGING === "true",
   entities: [User, Account, Transaction, Category, Budget, ImportBatch],
-  migrations: ["src/migrations/*.ts"],
-  subscribers: ["src/subscribers/*.ts"],
+  migrations: [join(__dirname, "../migrations/*{.ts,.js}")],
   ssl:
-    process.env.NODE_ENV === "production"
-      ? { rejectUnauthorized: false }
+    process.env.DB_SSL === "true" || process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== "false" }
       : false,
 });
 

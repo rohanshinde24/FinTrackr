@@ -10,9 +10,12 @@
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
     "test:coverage": "jest --runInBand --coverage",
-    "db:migrate": "ts-node src/config/database.ts",
-    "db:generate": "typeorm migration:generate -n",
-    "db:create": "typeorm migration:create -n"
+    "typeorm": "typeorm-ts-node-commonjs -d src/config/database.ts",
+    "db:migrate": "npm run typeorm -- migration:run",
+    "db:migrate:prod": "typeorm -d dist/config/database.js migration:run",
+    "db:revert": "npm run typeorm -- migration:revert",
+    "db:show": "npm run typeorm -- migration:show",
+    "db:generate": "npm run typeorm -- migration:generate"
   },
   "keywords": [
     "finance",
