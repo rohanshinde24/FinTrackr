@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import "@testing-library/jest-dom";
-import Sidebar from "./Sidebar.tsx";
+import Sidebar from "./Sidebar";
 
 const renderWithRouter = (component: React.ReactElement) => {
   return render(<BrowserRouter>{component}</BrowserRouter>);
@@ -67,4 +67,3 @@ describe("Sidebar Component", () => {
     expect(list).toBeInTheDocument();
   });
 });
-

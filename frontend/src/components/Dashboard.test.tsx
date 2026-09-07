@@ -1,10 +1,10 @@
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import Dashboard from "./Dashboard.tsx";
+import Dashboard from "./Dashboard";
 
 // Mock fetch
-global.fetch = jest.fn();
+global.fetch = vi.fn();
 
 const mockDashboardData = {
   totalBalance: 5000,
@@ -48,20 +48,27 @@ const mockDashboardData = {
   ],
 };
 
+const dashboardResponse = (): Response =>
+  ({
+    ok: true,
+    json: async () => ({ success: true, data: mockDashboardData }),
+  }) as Response;
+
 describe("Dashboard Component", () => {
   beforeEach(() => {
-    (global.fetch as jest.Mock).mockClear();
+    vi.mocked(global.fetch).mockClear();
   });
 
   it("displays loading state initially", () => {
-    (global.fetch as jest.Mock).mockImplementation(() => new Promise(() => {}));
+    vi.mocked(global.fetch).mockImplementation(() => new Promise(() => {}));
     render(<Dashboard />);
 
     expect(screen.getByText(/loading dashboard data/i)).toBeInTheDocument();
   });
 
   it("displays error state when fetch fails", async () => {
-    (global.fetch as jest.Mock).mockRejectedValue(new Error("Failed to fetch"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.mocked(global.fetch).mockRejectedValue(new Error("Failed to fetch"));
 
     render(<Dashboard />);
 
@@ -69,13 +76,15 @@ describe("Dashboard Component", () => {
       expect(screen.getByRole("alert")).toBeInTheDocument();
       expect(screen.getByText(/error loading dashboard/i)).toBeInTheDocument();
     });
+    expect(consoleError).toHaveBeenCalledWith(
+      "Error fetching dashboard data:",
+      expect.any(Error)
+    );
+    consoleError.mockRestore();
   });
 
   it("displays dashboard data when fetch succeeds", async () => {
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, data: mockDashboardData }),
-    });
+    vi.mocked(global.fetch).mockResolvedValue(dashboardResponse());
 
     render(<Dashboard />);
 
@@ -86,10 +95,7 @@ describe("Dashboard Component", () => {
   });
 
   it("renders financial statistics", async () => {
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, data: mockDashboardData }),
-    });
+    vi.mocked(global.fetch).mockResolvedValue(dashboardResponse());
 
     render(<Dashboard />);
 
@@ -102,10 +108,7 @@ describe("Dashboard Component", () => {
   });
 
   it("renders recent transactions", async () => {
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, data: mockDashboardData }),
-    });
+    vi.mocked(global.fetch).mockResolvedValue(dashboardResponse());
 
     render(<Dashboard />);
 
@@ -117,10 +120,7 @@ describe("Dashboard Component", () => {
   });
 
   it("renders budget progress section", async () => {
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, data: mockDashboardData }),
-    });
+    vi.mocked(global.fetch).mockResolvedValue(dashboardResponse());
 
     render(<Dashboard />);
 
@@ -131,10 +131,7 @@ describe("Dashboard Component", () => {
   });
 
   it("renders category spending section", async () => {
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, data: mockDashboardData }),
-    });
+    vi.mocked(global.fetch).mockResolvedValue(dashboardResponse());
 
     render(<Dashboard />);
 
@@ -146,10 +143,7 @@ describe("Dashboard Component", () => {
   });
 
   it("has proper semantic HTML structure", async () => {
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, data: mockDashboardData }),
-    });
+    vi.mocked(global.fetch).mockResolvedValue(dashboardResponse());
 
     const { container } = render(<Dashboard />);
 
@@ -160,10 +154,7 @@ describe("Dashboard Component", () => {
   });
 
   it("renders action buttons with proper accessibility", async () => {
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, data: mockDashboardData }),
-    });
+    vi.mocked(global.fetch).mockResolvedValue(dashboardResponse());
 
     render(<Dashboard />);
 
@@ -181,10 +172,7 @@ describe("Dashboard Component", () => {
   });
 
   it("progress bars have proper ARIA attributes", async () => {
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, data: mockDashboardData }),
-    });
+    vi.mocked(global.fetch).mockResolvedValue(dashboardResponse());
 
     render(<Dashboard />);
 
@@ -196,4 +184,3 @@ describe("Dashboard Component", () => {
     });
   });
 });
-
