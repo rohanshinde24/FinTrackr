@@ -7,6 +7,7 @@ yarn-error.log*
 # Production
 /build
 /dist
+/backend/dist/
 
 # Environment variables
 .env
@@ -40,4 +41,3 @@ coverage/
 .cache/
 temp/
 tmp/
-
