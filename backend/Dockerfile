@@ -1,21 +1,22 @@
-FROM node:22-alpine
+# syntax=docker/dockerfile:1.7
 
+FROM node:22-alpine AS dependencies
 WORKDIR /app
-
-# Copy package files
 COPY package*.json ./
+RUN npm ci
 
-# Install dependencies
-RUN npm ci --only=production
-
-# Copy source code
-COPY . .
-
-# Build the application
+FROM dependencies AS build
+COPY tsconfig.json ./
+COPY src ./src
 RUN npm run build
 
-# Expose port
-EXPOSE 3001
+FROM node:22-alpine AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+COPY --from=build /app/dist ./dist
 
-# Start the application
-CMD ["npm", "start"]
+USER node
+EXPOSE 3001
+CMD ["node", "dist/index.js"]
