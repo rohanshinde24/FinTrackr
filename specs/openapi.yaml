@@ -3,21 +3,35 @@ info:
   title: FinTrackr API
   version: 1.0.0
   description: Contract for the FinTrackr portfolio MVP.
+  license:
+    name: MIT
+    identifier: MIT
 servers:
-  - url: http://localhost:3001
-    description: Local development
+  - url: /
+    description: Current application origin
 tags:
   - name: Operations
+    description: Liveness and dependency readiness probes.
   - name: Authentication
+    description: Registration, login, and the authenticated profile.
   - name: Accounts
+    description: User-owned financial accounts.
   - name: Categories
+    description: User-owned income and expense categories.
   - name: Transactions
+    description: User-owned income and expense records.
   - name: Budgets
+    description: Monthly category spending limits.
   - name: Dashboard
+    description: Derived monthly financial summaries.
+
+security:
+  - bearerAuth: []
 
 paths:
   /health:
     get:
+      security: []
       tags: [Operations]
       operationId: getHealth
       summary: Check process liveness
@@ -30,6 +44,7 @@ paths:
                 $ref: "#/components/schemas/HealthResponse"
   /ready:
     get:
+      security: []
       tags: [Operations]
       operationId: getReadiness
       summary: Check database readiness
@@ -45,6 +60,7 @@ paths:
 
   /api/v1/auth/register:
     post:
+      security: []
       tags: [Authentication]
       operationId: registerUser
       summary: Register a user
@@ -67,6 +83,7 @@ paths:
           $ref: "#/components/responses/Conflict"
   /api/v1/auth/login:
     post:
+      security: []
       tags: [Authentication]
       operationId: loginUser
       summary: Sign in with email and password
