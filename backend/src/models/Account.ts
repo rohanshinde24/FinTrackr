@@ -7,6 +7,7 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
 } from "typeorm";
 import { User } from "./User";
 import { Transaction } from "./Transaction";
@@ -27,6 +28,7 @@ export enum AccountStatus {
 }
 
 @Entity("accounts")
+@Index(["userId"])
 export class Account {
   @PrimaryGeneratedColumn("uuid")
   id: string;
@@ -44,16 +46,10 @@ export class Account {
   status: AccountStatus;
 
   @Column({ type: "decimal", precision: 15, scale: 2, default: 0 })
-  balance: number;
-
-  @Column({ type: "decimal", precision: 15, scale: 2, default: 0 })
-  availableBalance: number;
+  openingBalance: string;
 
   @Column({ default: "USD" })
   currency: string;
-
-  @Column({ nullable: true })
-  accountNumber?: string;
 
   @Column({ nullable: true })
   institution?: string;
@@ -67,9 +63,6 @@ export class Account {
   @Column({ default: false })
   isDefault: boolean;
 
-  @Column({ type: "jsonb", nullable: true })
-  metadata?: Record<string, any>;
-
   @Column({ nullable: false })
   userId: string;
 
@@ -80,7 +73,7 @@ export class Account {
   updatedAt: Date;
 
   // Relationships
-  @ManyToOne(() => User, (user) => user.accounts)
+  @ManyToOne(() => User, (user) => user.accounts, { onDelete: "CASCADE" })
   @JoinColumn({ name: "userId" })
   user: User;
 

@@ -114,7 +114,7 @@ router.get(
       }
 
       // Remove password from response
-      const { password: _, ...userWithoutPassword } = user;
+      const { passwordHash: _, ...userWithoutPassword } = user;
 
       res.json({
         success: true,
@@ -249,7 +249,7 @@ router.patch(
       user.role = role;
       await userRepository.save(user);
 
-      const { password: _, ...userWithoutPassword } = user;
+      const { passwordHash: _, ...userWithoutPassword } = user;
 
       res.json({
         success: true,
@@ -337,7 +337,7 @@ router.patch(
       user.isEmailVerified = true;
       await userRepository.save(user);
 
-      const { password: _, ...userWithoutPassword } = user;
+      const { passwordHash: _, ...userWithoutPassword } = user;
 
       res.json({
         success: true,
@@ -355,4 +355,3 @@ router.patch(
 );
 
 export default router;
-

@@ -11,25 +11,24 @@ import {
 import { User } from "./User";
 import { Account } from "./Account";
 import { Category } from "./Category";
+import { ImportBatch } from "./ImportBatch";
 
 export enum TransactionType {
   INCOME = "INCOME",
   EXPENSE = "EXPENSE",
-  TRANSFER = "TRANSFER",
-  ADJUSTMENT = "ADJUSTMENT",
 }
 
 export enum TransactionStatus {
   PENDING = "PENDING",
   COMPLETED = "COMPLETED",
   CANCELLED = "CANCELLED",
-  FAILED = "FAILED",
 }
 
 @Entity("transactions")
-@Index(["userId", "date"])
-@Index(["accountId", "date"])
-@Index(["categoryId", "date"])
+@Index(["userId", "date", "id"])
+@Index(["accountId", "date", "id"])
+@Index(["userId", "categoryId", "date"])
+@Index(["userId", "importFingerprint"], { unique: true })
 export class Transaction {
   @PrimaryGeneratedColumn("uuid")
   id: string;
@@ -48,40 +47,13 @@ export class Transaction {
   status: TransactionStatus;
 
   @Column({ type: "decimal", precision: 15, scale: 2, nullable: false })
-  amount: number;
-
-  @Column({ type: "decimal", precision: 15, scale: 2, default: 0 })
-  fee: number;
+  amount: string;
 
   @Column({ type: "date", nullable: false })
   date: Date;
 
-  @Column({ type: "timestamp", nullable: true })
-  processedAt?: Date;
-
-  @Column({ nullable: true })
-  reference?: string;
-
   @Column({ nullable: true })
   notes?: string;
-
-  @Column({ nullable: true })
-  location?: string;
-
-  @Column({ nullable: true })
-  receipt?: string;
-
-  @Column({ type: "jsonb", nullable: true })
-  metadata?: Record<string, any>;
-
-  @Column({ default: false })
-  isRecurring: boolean;
-
-  @Column({ nullable: true })
-  recurringPattern?: string;
-
-  @Column({ type: "date", nullable: true })
-  nextOccurrence?: Date;
 
   @Column({ nullable: false })
   userId: string;
@@ -92,6 +64,12 @@ export class Transaction {
   @Column({ nullable: true })
   categoryId?: string;
 
+  @Column({ nullable: true })
+  importBatchId?: string;
+
+  @Column({ nullable: true })
+  importFingerprint?: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -99,15 +77,25 @@ export class Transaction {
   updatedAt: Date;
 
   // Relationships
-  @ManyToOne(() => User, (user) => user.transactions)
+  @ManyToOne(() => User, (user) => user.transactions, { onDelete: "CASCADE" })
   @JoinColumn({ name: "userId" })
   user: User;
 
-  @ManyToOne(() => Account, (account) => account.transactions)
+  @ManyToOne(() => Account, (account) => account.transactions, { onDelete: "RESTRICT" })
   @JoinColumn({ name: "accountId" })
   account: Account;
 
-  @ManyToOne(() => Category, (category) => category.transactions)
+  @ManyToOne(() => Category, (category) => category.transactions, {
+    nullable: true,
+    onDelete: "SET NULL",
+  })
   @JoinColumn({ name: "categoryId" })
   category?: Category;
+
+  @ManyToOne(() => ImportBatch, (importBatch) => importBatch.transactions, {
+    nullable: true,
+    onDelete: "SET NULL",
+  })
+  @JoinColumn({ name: "importBatchId" })
+  importBatch?: ImportBatch;
 }

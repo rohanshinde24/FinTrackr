@@ -6,25 +6,14 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from "typeorm";
 import { User } from "./User";
 import { Category } from "./Category";
 
-export enum BudgetPeriod {
-  MONTHLY = "MONTHLY",
-  QUARTERLY = "QUARTERLY",
-  YEARLY = "YEARLY",
-  CUSTOM = "CUSTOM",
-}
-
-export enum BudgetStatus {
-  ACTIVE = "ACTIVE",
-  PAUSED = "PAUSED",
-  COMPLETED = "COMPLETED",
-  OVERDUE = "OVERDUE",
-}
-
 @Entity("budgets")
+@Index(["userId", "startDate"])
+@Index(["userId", "categoryId", "startDate"], { unique: true })
 export class Budget {
   @PrimaryGeneratedColumn("uuid")
   id: string;
@@ -36,55 +25,22 @@ export class Budget {
   description?: string;
 
   @Column({ type: "decimal", precision: 15, scale: 2, nullable: false })
-  amount: number;
-
-  @Column({ type: "enum", enum: BudgetPeriod, default: BudgetPeriod.MONTHLY })
-  period: BudgetPeriod;
-
-  @Column({ type: "enum", enum: BudgetStatus, default: BudgetStatus.ACTIVE })
-  status: BudgetStatus;
+  amount: string;
 
   @Column({ type: "date", nullable: false })
   startDate: Date;
 
-  @Column({ type: "date", nullable: true })
-  endDate?: Date;
-
-  @Column({ type: "date", nullable: true })
-  lastResetDate?: Date;
-
-  @Column({ type: "decimal", precision: 15, scale: 2, default: 0 })
-  spent: number;
-
-  @Column({ type: "decimal", precision: 15, scale: 2, default: 0 })
-  remaining: number;
-
-  @Column({ nullable: true })
-  color?: string;
-
-  @Column({ nullable: true })
-  icon?: string;
-
-  @Column({ type: "jsonb", nullable: true })
-  metadata?: Record<string, any>;
-
-  @Column({ default: false })
-  isRecurring: boolean;
-
-  @Column({ default: true })
-  sendNotifications: boolean;
+  @Column({ type: "date", nullable: false })
+  endDate: Date;
 
   @Column({ type: "decimal", precision: 5, scale: 2, default: 80 })
-  warningThreshold: number;
-
-  @Column({ type: "decimal", precision: 5, scale: 2, default: 95 })
-  criticalThreshold: number;
+  warningThreshold: string;
 
   @Column({ nullable: false })
   userId: string;
 
-  @Column({ nullable: true })
-  categoryId?: string;
+  @Column({ nullable: false })
+  categoryId: string;
 
   @CreateDateColumn()
   createdAt: Date;
@@ -93,11 +49,11 @@ export class Budget {
   updatedAt: Date;
 
   // Relationships
-  @ManyToOne(() => User, (user) => user.budgets)
+  @ManyToOne(() => User, (user) => user.budgets, { onDelete: "CASCADE" })
   @JoinColumn({ name: "userId" })
   user: User;
 
-  @ManyToOne(() => Category, (category) => category.budgets)
+  @ManyToOne(() => Category, (category) => category.budgets, { onDelete: "RESTRICT" })
   @JoinColumn({ name: "categoryId" })
-  category?: Category;
+  category: Category;
 }
