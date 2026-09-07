@@ -1,0 +1,1267 @@
+openapi: 3.1.0
+info:
+  title: FinTrackr API
+  version: 1.0.0
+  description: Contract for the FinTrackr portfolio MVP.
+servers:
+  - url: http://localhost:3001
+    description: Local development
+tags:
+  - name: Operations
+  - name: Authentication
+  - name: Accounts
+  - name: Categories
+  - name: Transactions
+  - name: Budgets
+  - name: Dashboard
+
+paths:
+  /health:
+    get:
+      tags: [Operations]
+      operationId: getHealth
+      summary: Check process liveness
+      responses:
+        "200":
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /ready:
+    get:
+      tags: [Operations]
+      operationId: getReadiness
+      summary: Check database readiness
+      responses:
+        "200":
+          description: API dependencies are ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /api/v1/auth/register:
+    post:
+      tags: [Authentication]
+      operationId: registerUser
+      summary: Register a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/auth/login:
+    post:
+      tags: [Authentication]
+      operationId: loginUser
+      summary: Sign in with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: User authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/auth/profile:
+    get:
+      tags: [Authentication]
+      operationId: getProfile
+      summary: Get the authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Authenticated user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/accounts:
+    get:
+      tags: [Accounts]
+      operationId: listAccounts
+      summary: List the authenticated user's accounts
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Account collection
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [items]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Account"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Accounts]
+      operationId: createAccount
+      summary: Create an account
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountInput"
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/accounts/{accountId}:
+    parameters:
+      - $ref: "#/components/parameters/AccountId"
+    get:
+      tags: [Accounts]
+      operationId: getAccount
+      summary: Get an owned account
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Account details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Accounts]
+      operationId: updateAccount
+      summary: Update an owned account
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountUpdate"
+      responses:
+        "200":
+          description: Account updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Accounts]
+      operationId: deleteAccount
+      summary: Delete an owned account without transactions
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Account deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/categories:
+    get:
+      tags: [Categories]
+      operationId: listCategories
+      summary: List active categories
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            $ref: "#/components/schemas/CategoryType"
+      responses:
+        "200":
+          description: Category collection
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [items]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Category"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Categories]
+      operationId: createCategory
+      summary: Create a category
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryInput"
+      responses:
+        "201":
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/categories/{categoryId}:
+    parameters:
+      - $ref: "#/components/parameters/CategoryId"
+    patch:
+      tags: [Categories]
+      operationId: updateCategory
+      summary: Update an owned category
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryUpdate"
+      responses:
+        "200":
+          description: Category updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Categories]
+      operationId: archiveCategory
+      summary: Archive an owned category
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Category archived
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/transactions:
+    get:
+      tags: [Transactions]
+      operationId: listTransactions
+      summary: List owned transactions in deterministic order
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/PageSize"
+        - name: accountId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          schema:
+            $ref: "#/components/schemas/TransactionType"
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Cursor-paginated transaction collection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionCollectionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Transactions]
+      operationId: createTransaction
+      summary: Create a transaction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionInput"
+      responses:
+        "201":
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/transactions/{transactionId}:
+    parameters:
+      - $ref: "#/components/parameters/TransactionId"
+    get:
+      tags: [Transactions]
+      operationId: getTransaction
+      summary: Get an owned transaction
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Transaction details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Transactions]
+      operationId: updateTransaction
+      summary: Update an owned transaction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionUpdate"
+      responses:
+        "200":
+          description: Transaction updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Transactions]
+      operationId: deleteTransaction
+      summary: Delete an owned transaction
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Transaction deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/imports/transactions:
+    post:
+      tags: [Transactions]
+      operationId: importTransactions
+      summary: Stream a CSV transaction import
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Existing result returned for a completed idempotency key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResponse"
+        "201":
+          description: Import completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/budgets:
+    get:
+      tags: [Budgets]
+      operationId: listBudgets
+      summary: List budgets and calculated utilization
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Month"
+      responses:
+        "200":
+          description: Budget collection
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [items]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Budget"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Budgets]
+      operationId: createBudget
+      summary: Create a monthly expense budget
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BudgetInput"
+      responses:
+        "201":
+          description: Budget created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/budgets/{budgetId}:
+    parameters:
+      - $ref: "#/components/parameters/BudgetId"
+    patch:
+      tags: [Budgets]
+      operationId: updateBudget
+      summary: Update an owned budget
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BudgetUpdate"
+      responses:
+        "200":
+          description: Budget updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Budgets]
+      operationId: deleteBudget
+      summary: Delete an owned budget
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Budget deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/dashboard/overview:
+    get:
+      tags: [Dashboard]
+      operationId: getDashboardOverview
+      summary: Calculate financial overview for a month
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Month"
+      responses:
+        "200":
+          description: Calculated dashboard overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    AccountId:
+      name: accountId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TransactionId:
+      name: transactionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    BudgetId:
+      name: budgetId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Cursor:
+      name: cursor
+      in: query
+      description: Opaque cursor returned by the previous page.
+      schema:
+        type: string
+    PageSize:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    Month:
+      name: month
+      in: query
+      description: Reporting month in UTC.
+      schema:
+        type: string
+        pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+
+  responses:
+    BadRequest:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Authentication is required or invalid
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource was not found or is not owned by the caller
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: Request conflicts with current resource state
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServiceUnavailable:
+      description: A required dependency is unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    DecimalAmount:
+      type: string
+      pattern: "^[0-9]{1,13}(\\.[0-9]{1,2})?$"
+      examples: ["42.50"]
+    Timestamp:
+      type: string
+      format: date-time
+    UserRole:
+      type: string
+      enum: [USER, ADMIN, SUPER_ADMIN]
+    AccountType:
+      type: string
+      enum: [CHECKING, SAVINGS, CREDIT_CARD, INVESTMENT, LOAN, OTHER]
+    AccountStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE, CLOSED]
+    CategoryType:
+      type: string
+      enum: [INCOME, EXPENSE]
+    TransactionType:
+      type: string
+      enum: [INCOME, EXPENSE]
+    TransactionStatus:
+      type: string
+      enum: [PENDING, COMPLETED, CANCELLED]
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          examples: [VALIDATION_ERROR]
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    ErrorResponse:
+      type: object
+      required: [success, error]
+      properties:
+        success:
+          const: false
+        error:
+          $ref: "#/components/schemas/Error"
+    HealthResponse:
+      type: object
+      required: [status, timestamp]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        timestamp:
+          $ref: "#/components/schemas/Timestamp"
+
+    User:
+      type: object
+      required: [id, email, firstName, lastName, role, defaultCurrency, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          $ref: "#/components/schemas/UserRole"
+        defaultCurrency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, firstName, lastName]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 80
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+    AuthData:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+    AuthResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          const: true
+        data:
+          $ref: "#/components/schemas/AuthData"
+    UserResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          required: [user]
+          properties:
+            user:
+              $ref: "#/components/schemas/User"
+
+    Account:
+      type: object
+      required: [id, name, type, status, openingBalance, currentBalance, currency, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        institution:
+          type: [string, "null"]
+        type:
+          $ref: "#/components/schemas/AccountType"
+        status:
+          $ref: "#/components/schemas/AccountStatus"
+        openingBalance:
+          $ref: "#/components/schemas/DecimalAmount"
+        currentBalance:
+          $ref: "#/components/schemas/DecimalAmount"
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+    AccountInput:
+      type: object
+      additionalProperties: false
+      required: [name, type, openingBalance, currency]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        institution:
+          type: string
+          maxLength: 100
+        type:
+          $ref: "#/components/schemas/AccountType"
+        openingBalance:
+          $ref: "#/components/schemas/DecimalAmount"
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+    AccountUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        institution:
+          type: [string, "null"]
+        status:
+          $ref: "#/components/schemas/AccountStatus"
+    AccountResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          required: [account]
+          properties:
+            account:
+              $ref: "#/components/schemas/Account"
+
+    Category:
+      type: object
+      required: [id, name, type, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/CategoryType"
+        color:
+          type: [string, "null"]
+        icon:
+          type: [string, "null"]
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+    CategoryInput:
+      type: object
+      additionalProperties: false
+      required: [name, type]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        type:
+          $ref: "#/components/schemas/CategoryType"
+        color:
+          type: string
+          pattern: "^#[0-9A-Fa-f]{6}$"
+        icon:
+          type: string
+          maxLength: 50
+    CategoryUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        color:
+          type: [string, "null"]
+        icon:
+          type: [string, "null"]
+    CategoryResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          required: [category]
+          properties:
+            category:
+              $ref: "#/components/schemas/Category"
+
+    Transaction:
+      type: object
+      required: [id, accountId, description, type, status, amount, date, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+        description:
+          type: string
+        type:
+          $ref: "#/components/schemas/TransactionType"
+        status:
+          $ref: "#/components/schemas/TransactionStatus"
+        amount:
+          $ref: "#/components/schemas/DecimalAmount"
+        date:
+          type: string
+          format: date
+        notes:
+          type: [string, "null"]
+        account:
+          $ref: "#/components/schemas/Account"
+        category:
+          oneOf:
+            - $ref: "#/components/schemas/Category"
+            - type: "null"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+    TransactionInput:
+      type: object
+      additionalProperties: false
+      required: [accountId, categoryId, description, type, amount, date]
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+        description:
+          type: string
+          minLength: 1
+          maxLength: 200
+        type:
+          $ref: "#/components/schemas/TransactionType"
+        amount:
+          $ref: "#/components/schemas/DecimalAmount"
+        date:
+          type: string
+          format: date
+        notes:
+          type: string
+          maxLength: 1000
+    TransactionUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        categoryId:
+          type: [string, "null"]
+          format: uuid
+        description:
+          type: string
+          minLength: 1
+          maxLength: 200
+        type:
+          $ref: "#/components/schemas/TransactionType"
+        status:
+          $ref: "#/components/schemas/TransactionStatus"
+        amount:
+          $ref: "#/components/schemas/DecimalAmount"
+        date:
+          type: string
+          format: date
+        notes:
+          type: [string, "null"]
+          maxLength: 1000
+    TransactionResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          required: [transaction]
+          properties:
+            transaction:
+              $ref: "#/components/schemas/Transaction"
+    TransactionCollectionResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          required: [items, nextCursor]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Transaction"
+            nextCursor:
+              type: [string, "null"]
+
+    Budget:
+      type: object
+      required: [id, categoryId, name, amount, month, spent, remaining, percentage, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        amount:
+          $ref: "#/components/schemas/DecimalAmount"
+        month:
+          type: string
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+        spent:
+          $ref: "#/components/schemas/DecimalAmount"
+        remaining:
+          type: string
+          pattern: "^-?[0-9]{1,13}(\\.[0-9]{1,2})?$"
+        percentage:
+          type: number
+          minimum: 0
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+    BudgetInput:
+      type: object
+      additionalProperties: false
+      required: [categoryId, name, amount, month]
+      properties:
+        categoryId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        amount:
+          $ref: "#/components/schemas/DecimalAmount"
+        month:
+          type: string
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+        warningThreshold:
+          type: number
+          minimum: 0
+          maximum: 100
+          default: 80
+    BudgetUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        amount:
+          $ref: "#/components/schemas/DecimalAmount"
+        warningThreshold:
+          type: number
+          minimum: 0
+          maximum: 100
+    BudgetResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          required: [budget]
+          properties:
+            budget:
+              $ref: "#/components/schemas/Budget"
+
+    ImportResult:
+      type: object
+      required: [id, status, accepted, rejected, duplicates]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [COMPLETED, FAILED]
+        accepted:
+          type: integer
+          minimum: 0
+        rejected:
+          type: integer
+          minimum: 0
+        duplicates:
+          type: integer
+          minimum: 0
+        errors:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [row, message]
+            properties:
+              row:
+                type: integer
+              message:
+                type: string
+    ImportResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          required: [import]
+          properties:
+            import:
+              $ref: "#/components/schemas/ImportResult"
+
+    DashboardOverview:
+      type: object
+      required:
+        - month
+        - totalBalance
+        - monthlyIncome
+        - monthlyExpenses
+        - netIncome
+        - categorySpending
+        - budgetProgress
+        - monthlyTrend
+      properties:
+        month:
+          type: string
+        totalBalance:
+          $ref: "#/components/schemas/DecimalAmount"
+        monthlyIncome:
+          $ref: "#/components/schemas/DecimalAmount"
+        monthlyExpenses:
+          $ref: "#/components/schemas/DecimalAmount"
+        netIncome:
+          type: string
+          pattern: "^-?[0-9]{1,13}(\\.[0-9]{1,2})?$"
+        categorySpending:
+          type: array
+          items:
+            type: object
+            required: [categoryId, name, total]
+            properties:
+              categoryId:
+                type: string
+                format: uuid
+              name:
+                type: string
+              total:
+                $ref: "#/components/schemas/DecimalAmount"
+        budgetProgress:
+          type: array
+          items:
+            $ref: "#/components/schemas/Budget"
+        monthlyTrend:
+          type: array
+          items:
+            type: object
+            required: [month, income, expenses, net]
+            properties:
+              month:
+                type: string
+              income:
+                $ref: "#/components/schemas/DecimalAmount"
+              expenses:
+                $ref: "#/components/schemas/DecimalAmount"
+              net:
+                type: string
+                pattern: "^-?[0-9]{1,13}(\\.[0-9]{1,2})?$"
+    DashboardResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          const: true
+        data:
+          $ref: "#/components/schemas/DashboardOverview"
