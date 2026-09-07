@@ -719,6 +719,10 @@ components:
       type: string
       pattern: "^[0-9]{1,13}(\\.[0-9]{1,2})?$"
       examples: ["42.50"]
+    SignedDecimalAmount:
+      type: string
+      pattern: "^-?[0-9]{1,13}(\\.[0-9]{1,2})?$"
+      examples: ["-42.50"]
     Timestamp:
       type: string
       format: date-time
@@ -875,7 +879,7 @@ components:
         openingBalance:
           $ref: "#/components/schemas/DecimalAmount"
         currentBalance:
-          $ref: "#/components/schemas/DecimalAmount"
+          $ref: "#/components/schemas/SignedDecimalAmount"
         currency:
           type: string
           pattern: "^[A-Z]{3}$"
