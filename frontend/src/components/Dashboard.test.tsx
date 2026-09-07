@@ -1,187 +1,185 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
-import "@testing-library/jest-dom";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { BrowserRouter } from "react-router-dom";
 import Dashboard from "./Dashboard";
 
-// Mock fetch
 global.fetch = vi.fn();
 
-const mockDashboardData = {
-  totalBalance: 5000,
-  monthlyIncome: 3000,
-  monthlyExpenses: 2000,
-  netIncome: 1000,
-  recentTransactions: [
-    {
-      id: 1,
-      amount: 50.0,
-      description: "Grocery shopping",
-      type: "EXPENSE",
-      date: "2025-10-28",
-      account: { name: "Checking" },
-      category: { name: "Food" },
-    },
-    {
-      id: 2,
-      amount: 1000.0,
-      description: "Salary",
-      type: "INCOME",
-      date: "2025-10-25",
-      account: { name: "Checking" },
-      category: { name: "Income" },
-    },
+const overview = {
+  month: "2026-09",
+  totalBalance: "8071.55",
+  monthlyIncome: "3200.00",
+  monthlyExpenses: "128.45",
+  netIncome: "3071.55",
+  categorySpending: [
+    { categoryId: "category-1", name: "Groceries", total: "128.45" },
   ],
   budgetProgress: [
     {
-      id: 1,
-      name: "Food Budget",
-      amount: 500,
-      spent: 300,
-      remaining: 200,
-      percentage: 60,
-      category: "Food",
+      id: "budget-1",
+      categoryId: "category-1",
+      name: "Monthly groceries",
+      amount: "600.00",
+      month: "2026-09",
+      spent: "128.45",
+      remaining: "471.55",
+      percentage: 21.41,
+      createdAt: "2026-09-01T00:00:00.000Z",
     },
   ],
-  categorySpending: [
-    { categoryName: "Food", total: "300" },
-    { categoryName: "Transport", total: "150" },
+  monthlyTrend: [
+    { month: "2026-04", income: "0.00", expenses: "0.00", net: "0.00" },
+    { month: "2026-05", income: "0.00", expenses: "0.00", net: "0.00" },
+    { month: "2026-06", income: "0.00", expenses: "0.00", net: "0.00" },
+    { month: "2026-07", income: "0.00", expenses: "0.00", net: "0.00" },
+    { month: "2026-08", income: "0.00", expenses: "0.00", net: "0.00" },
+    { month: "2026-09", income: "3200.00", expenses: "128.45", net: "3071.55" },
   ],
 };
 
-const dashboardResponse = (): Response =>
+const transactions = {
+  items: [
+    {
+      id: "transaction-1",
+      accountId: "account-1",
+      categoryId: "category-1",
+      description: "Weekend groceries",
+      type: "EXPENSE",
+      status: "COMPLETED",
+      amount: "128.45",
+      date: "2026-09-05",
+    },
+  ],
+};
+
+const response = (data: unknown, status = 200): Response =>
   ({
-    ok: true,
-    json: async () => ({ success: true, data: mockDashboardData }),
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () =>
+      status >= 200 && status < 300
+        ? { success: true, data }
+        : { success: false, error: { code: "AUTHENTICATION_REQUIRED", message: "Sign in required" } },
   }) as Response;
 
-describe("Dashboard Component", () => {
+const mockSuccessfulRequests = () => {
+  vi.mocked(global.fetch).mockImplementation(async (input) => {
+    const url = String(input);
+    if (url.includes("/dashboard/overview")) return response(overview);
+    if (url.includes("/transactions")) return response(transactions);
+    if (url.includes("/accounts")) return response({ items: [{ id: "account-1", name: "Everyday Checking" }] });
+    if (url.includes("/categories")) return response({ items: [{ id: "category-1", name: "Groceries" }] });
+    throw new Error(`Unexpected request: ${url}`);
+  });
+};
+
+const renderDashboard = (onUnauthorized = vi.fn()) =>
+  render(
+    <BrowserRouter>
+      <Dashboard
+        token="test-token"
+        currency="USD"
+        firstName="Rohan"
+        onUnauthorized={onUnauthorized}
+      />
+    </BrowserRouter>
+  );
+
+describe("Dashboard", () => {
   beforeEach(() => {
-    vi.mocked(global.fetch).mockClear();
+    vi.mocked(global.fetch).mockReset();
   });
 
-  it("displays loading state initially", () => {
-    vi.mocked(global.fetch).mockImplementation(() => new Promise(() => {}));
-    render(<Dashboard />);
+  it("shows a loading state", () => {
+    vi.mocked(global.fetch).mockImplementation(() => new Promise(() => undefined));
+    renderDashboard();
 
-    expect(screen.getByText(/loading dashboard data/i)).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Loading your finances");
   });
 
-  it("displays error state when fetch fails", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    vi.mocked(global.fetch).mockRejectedValue(new Error("Failed to fetch"));
+  it("loads authenticated dashboard data and supporting collections", async () => {
+    mockSuccessfulRequests();
+    renderDashboard();
 
-    render(<Dashboard />);
+    expect(await screen.findByText("Welcome back, Rohan")).toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledTimes(4);
 
-    await waitFor(() => {
-      expect(screen.getByRole("alert")).toBeInTheDocument();
-      expect(screen.getByText(/error loading dashboard/i)).toBeInTheDocument();
-    });
-    expect(consoleError).toHaveBeenCalledWith(
-      "Error fetching dashboard data:",
-      expect.any(Error)
+    for (const [, request] of vi.mocked(global.fetch).mock.calls) {
+      const headers = request?.headers as Headers;
+      expect(headers.get("Authorization")).toBe("Bearer test-token");
+    }
+  });
+
+  it("renders the exact financial summary returned by the API", async () => {
+    mockSuccessfulRequests();
+    renderDashboard();
+
+    expect(await screen.findByText("$8,071.55")).toBeInTheDocument();
+    expect(screen.getByText("$3,200.00")).toBeInTheDocument();
+    expect(screen.getAllByText("$128.45").length).toBeGreaterThan(0);
+    expect(screen.getByText("$3,071.55")).toBeInTheDocument();
+  });
+
+  it("renders recent transactions with resolved account and category names", async () => {
+    mockSuccessfulRequests();
+    renderDashboard();
+
+    expect(await screen.findByText("Weekend groceries")).toBeInTheDocument();
+    expect(screen.getByText("Everyday Checking · Groceries")).toBeInTheDocument();
+  });
+
+  it("renders budget utilization and category spending", async () => {
+    mockSuccessfulRequests();
+    renderDashboard();
+
+    expect(await screen.findByText("Monthly groceries")).toBeInTheDocument();
+    expect(screen.getByText("21.41% used")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: /monthly groceries budget usage/i })).toHaveAttribute(
+      "aria-valuenow",
+      "21.41"
     );
-    consoleError.mockRestore();
+    expect(screen.getAllByText("Groceries").length).toBeGreaterThan(0);
   });
 
-  it("displays dashboard data when fetch succeeds", async () => {
-    vi.mocked(global.fetch).mockResolvedValue(dashboardResponse());
+  it("renders the six-month cash-flow series", async () => {
+    mockSuccessfulRequests();
+    renderDashboard();
 
-    render(<Dashboard />);
+    expect(await screen.findByText("Six-month cash flow")).toBeInTheDocument();
+    expect(screen.getByLabelText(/September 2026.*income.*expenses/i)).toBeInTheDocument();
+  });
 
-    await waitFor(() => {
-      expect(screen.getByText("Dashboard")).toBeInTheDocument();
-      expect(screen.getByText(/welcome back/i)).toBeInTheDocument();
+  it("reloads analytics for the selected reporting month", async () => {
+    mockSuccessfulRequests();
+    renderDashboard();
+    await screen.findByText("Welcome back, Rohan");
+
+    fireEvent.change(screen.getByLabelText("Reporting month"), {
+      target: { value: "2026-08" },
     });
-    expect(global.fetch).toHaveBeenCalledWith("/api/v1/dashboard/overview");
-  });
-
-  it("renders financial statistics", async () => {
-    vi.mocked(global.fetch).mockResolvedValue(dashboardResponse());
-
-    render(<Dashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText("Total Balance")).toBeInTheDocument();
-      expect(screen.getByText("Monthly Income")).toBeInTheDocument();
-      expect(screen.getByText("Monthly Expenses")).toBeInTheDocument();
-      expect(screen.getByText("Net Income")).toBeInTheDocument();
-    });
-  });
-
-  it("renders recent transactions", async () => {
-    vi.mocked(global.fetch).mockResolvedValue(dashboardResponse());
-
-    render(<Dashboard />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Recent Transactions")).toBeInTheDocument();
-      expect(screen.getByText("Grocery shopping")).toBeInTheDocument();
-      expect(screen.getByText("Salary")).toBeInTheDocument();
+      expect(
+        vi.mocked(global.fetch).mock.calls.some(([url]) =>
+          String(url).includes("/dashboard/overview?month=2026-08")
+        )
+      ).toBe(true);
     });
   });
 
-  it("renders budget progress section", async () => {
-    vi.mocked(global.fetch).mockResolvedValue(dashboardResponse());
+  it("returns an expired session to authentication", async () => {
+    const onUnauthorized = vi.fn();
+    vi.mocked(global.fetch).mockResolvedValue(response(null, 401));
+    renderDashboard(onUnauthorized);
 
-    render(<Dashboard />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Budget Progress")).toBeInTheDocument();
-      expect(screen.getByText("Food Budget")).toBeInTheDocument();
-    });
+    await waitFor(() => expect(onUnauthorized).toHaveBeenCalled());
   });
 
-  it("renders category spending section", async () => {
-    vi.mocked(global.fetch).mockResolvedValue(dashboardResponse());
+  it("shows a recoverable error for non-authentication failures", async () => {
+    vi.mocked(global.fetch).mockRejectedValue(new Error("API unavailable"));
+    renderDashboard();
 
-    render(<Dashboard />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Category Spending")).toBeInTheDocument();
-      expect(screen.getByText("Food")).toBeInTheDocument();
-      expect(screen.getByText("Transport")).toBeInTheDocument();
-    });
-  });
-
-  it("has proper semantic HTML structure", async () => {
-    vi.mocked(global.fetch).mockResolvedValue(dashboardResponse());
-
-    const { container } = render(<Dashboard />);
-
-    await waitFor(() => {
-      const main = container.querySelector("main");
-      expect(main).toHaveAttribute("role", "main");
-    });
-  });
-
-  it("renders action buttons with proper accessibility", async () => {
-    vi.mocked(global.fetch).mockResolvedValue(dashboardResponse());
-
-    render(<Dashboard />);
-
-    await waitFor(() => {
-      const addTransactionBtn = screen.getByRole("button", {
-        name: /add new transaction/i,
-      });
-      const exportDataBtn = screen.getByRole("button", {
-        name: /export dashboard data/i,
-      });
-
-      expect(addTransactionBtn).toBeInTheDocument();
-      expect(exportDataBtn).toBeInTheDocument();
-    });
-  });
-
-  it("progress bars have proper ARIA attributes", async () => {
-    vi.mocked(global.fetch).mockResolvedValue(dashboardResponse());
-
-    render(<Dashboard />);
-
-    await waitFor(() => {
-      const progressBar = screen.getByRole("progressbar");
-      expect(progressBar).toHaveAttribute("aria-valuenow", "60");
-      expect(progressBar).toHaveAttribute("aria-valuemin", "0");
-      expect(progressBar).toHaveAttribute("aria-valuemax", "100");
-    });
+    expect(await screen.findByRole("alert")).toHaveTextContent("API unavailable");
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
 });

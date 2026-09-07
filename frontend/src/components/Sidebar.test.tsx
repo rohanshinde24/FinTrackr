@@ -20,18 +20,18 @@ describe("Sidebar Component", () => {
     expect(screen.getByText("Analytics")).toBeInTheDocument();
   });
 
-  it("renders quick action buttons", () => {
+  it("renders quick action links", () => {
     renderWithRouter(<Sidebar />);
 
     expect(
-      screen.getByRole("button", { name: /add new transaction/i })
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: /add new transaction/i })
+    ).toHaveAttribute("href", "/transactions");
     expect(
-      screen.getByRole("button", { name: /add new account/i })
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: /add new account/i })
+    ).toHaveAttribute("href", "/accounts");
     expect(
-      screen.getByRole("button", { name: /create new budget/i })
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: /create new budget/i })
+    ).toHaveAttribute("href", "/budgets");
   });
 
   it("has proper semantic HTML structure", () => {
