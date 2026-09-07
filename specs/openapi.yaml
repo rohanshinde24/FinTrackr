@@ -1243,11 +1243,15 @@ components:
       properties:
         month:
           type: string
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
         totalBalance:
-          $ref: "#/components/schemas/DecimalAmount"
+          description: Account opening balances plus completed activity before the reporting month's exclusive end.
+          $ref: "#/components/schemas/SignedDecimalAmount"
         monthlyIncome:
+          description: Completed income within the reporting month.
           $ref: "#/components/schemas/DecimalAmount"
         monthlyExpenses:
+          description: Completed expenses within the reporting month.
           $ref: "#/components/schemas/DecimalAmount"
         netIncome:
           type: string
@@ -1270,7 +1274,10 @@ components:
           items:
             $ref: "#/components/schemas/Budget"
         monthlyTrend:
+          description: Six UTC months ending with the reporting month, including zero-valued months.
           type: array
+          minItems: 6
+          maxItems: 6
           items:
             type: object
             required: [month, income, expenses, net]
