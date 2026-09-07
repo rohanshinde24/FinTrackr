@@ -1,119 +1,52 @@
-import express from "express";
-import cors from "cors";
-import helmet from "helmet";
-import morgan from "morgan";
-import rateLimit from "express-rate-limit";
+import "reflect-metadata";
+import { Server } from "http";
 import { config } from "dotenv";
-import { initializeDatabase } from "./config/database";
-
-// Import routes
-import authRoutes from "./routes/auth";
-import userRoutes from "./routes/user";
-import accountRoutes from "./routes/account";
-import transactionRoutes from "./routes/transaction";
-import categoryRoutes from "./routes/category";
-import budgetRoutes from "./routes/budget";
-import dashboardRoutes from "./routes/dashboard";
-import adminRoutes from "./routes/admin";
+import { createApp } from "./app";
+import { AppDataSource, initializeDatabase } from "./config/database";
 
 // Load environment variables
 config();
 
-const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = Number.parseInt(process.env.PORT || "3001", 10);
 
-// Security middleware
-app.use(helmet());
-
-// CORS configuration
-app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
-    credentials: true,
-  })
-);
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"), // limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again later.",
-});
-app.use("/api/", limiter);
-
-// Body parsing middleware
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-// Logging middleware
-app.use(morgan("combined"));
-
-// Health check endpoint
-app.get("/health", (_req, res) => {
-  res.status(200).json({
-    status: "OK",
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
+const closeServer = (server: Server): Promise<void> =>
+  new Promise((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
   });
-});
 
-// API routes
-app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/accounts", accountRoutes);
-app.use("/api/transactions", transactionRoutes);
-app.use("/api/categories", categoryRoutes);
-app.use("/api/budgets", budgetRoutes);
-app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/admin", adminRoutes); // Admin routes
+export const startServer = async (): Promise<Server> => {
+  await initializeDatabase();
 
-// 404 handler
-app.use("*", (req, res) => {
-  res.status(404).json({
-    error: "Not Found",
-    message: `Route ${req.originalUrl} not found`,
+  const app = createApp();
+  const server = app.listen(PORT, () => {
+    console.log(`FinTrackr API listening on port ${PORT}`);
   });
-});
 
-// Global error handler
-app.use(
-  (
-    err: any,
-    _req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction
-  ) => {
-    console.error("Global error handler:", err);
+  let shuttingDown = false;
+  const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`${signal} received; shutting down`);
 
-    res.status(err.status || 500).json({
-      error: err.message || "Internal Server Error",
-      ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
-    });
-  }
-);
+    try {
+      await closeServer(server);
+      if (AppDataSource.isInitialized) {
+        await AppDataSource.destroy();
+      }
+      process.exitCode = 0;
+    } catch (error) {
+      console.error("Graceful shutdown failed:", error);
+      process.exitCode = 1;
+    }
+  };
 
-// Initialize database and start server
-const startServer = async () => {
-  try {
-    // Initialize database connection
-    await initializeDatabase();
-    console.log("✅ Database connected successfully");
+  process.once("SIGTERM", () => void shutdown("SIGTERM"));
+  process.once("SIGINT", () => void shutdown("SIGINT"));
 
-    app.listen(PORT, () => {
-      console.log(`🚀 FinTrackr Backend Server running on port ${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
-      console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-      console.log(`👤 User Registration: POST http://localhost:${PORT}/api/auth/register`);
-      console.log(`🔐 User Login: POST http://localhost:${PORT}/api/auth/login`);
-      console.log(`🛡️  Admin Login: POST http://localhost:${PORT}/api/auth/admin/login`);
-      console.log(`👨‍💼 Admin Dashboard: GET http://localhost:${PORT}/api/admin/users`);
-    });
-  } catch (error) {
-    console.error("Failed to start server:", error);
-    process.exit(1);
-  }
+  return server;
 };
 
-startServer();
-
-export default app;
+void startServer().catch((error) => {
+  console.error("Failed to start server:", error);
+  process.exitCode = 1;
+});
