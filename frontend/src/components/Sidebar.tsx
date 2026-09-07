@@ -5,7 +5,6 @@ import {
   CreditCard,
   TrendingUp,
   PieChart,
-  FileText,
   Wallet,
   BarChart3,
 } from "lucide-react";
@@ -69,30 +68,30 @@ const Sidebar: React.FC = () => {
             role="group"
             aria-label="Quick action buttons"
           >
-            <button
+            <Link
+              to="/transactions"
               className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              type="button"
               aria-label="Add new transaction"
             >
               <CreditCard size={20} aria-hidden="true" />
               <span>Add Transaction</span>
-            </button>
-            <button
+            </Link>
+            <Link
+              to="/accounts"
               className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              type="button"
               aria-label="Add new account"
             >
               <Wallet size={20} aria-hidden="true" />
               <span>Add Account</span>
-            </button>
-            <button
+            </Link>
+            <Link
+              to="/budgets"
               className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              type="button"
               aria-label="Create new budget"
             >
               <PieChart size={20} aria-hidden="true" />
               <span>Create Budget</span>
-            </button>
+            </Link>
           </div>
         </section>
       </nav>
