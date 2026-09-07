@@ -49,7 +49,10 @@ requests return each transaction exactly once in descending `(date, id)` order.
 Given a known set of completed income and expense transactions, the dashboard
 returns the exact total balance, monthly income, monthly expenses, net income,
 category spending, and budget utilization for the requested UTC month. Pending
-and cancelled transactions do not affect completed totals.
+and cancelled transactions do not affect completed totals. Total balance is an
+as-of value that includes completed transactions before the requested month's
+exclusive end. Monthly trends contain six UTC months ending with the requested
+month and include zero-valued months.
 
 ## CSV import
 
@@ -72,4 +75,3 @@ Given `main` passes specification, type, test, coverage, and build checks, the
 pipeline applies migrations, deploys immutable frontend and API artifacts, and
 verifies health, readiness, authentication, and frontend availability. A failed
 smoke check does not receive production traffic.
-
