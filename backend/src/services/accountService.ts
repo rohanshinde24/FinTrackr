@@ -1,4 +1,5 @@
 import { AppDataSource } from "../config/database";
+import { centsToMoney, moneyToCents } from "../domain/money";
 import { Account, AccountStatus, AccountType } from "../models/Account";
 import { Transaction, TransactionStatus, TransactionType } from "../models/Transaction";
 
@@ -41,18 +42,6 @@ export class AccountServiceError extends Error {
 
 const accountRepository = AppDataSource.getRepository(Account);
 const transactionRepository = AppDataSource.getRepository(Transaction);
-
-const moneyToCents = (amount: string): bigint => {
-  const sign = amount.startsWith("-") ? -1n : 1n;
-  const [whole, fraction = ""] = amount.replace(/^-/, "").split(".");
-  return sign * (BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0")));
-};
-
-const centsToMoney = (amount: bigint): string => {
-  const sign = amount < 0n ? "-" : "";
-  const absolute = amount < 0n ? -amount : amount;
-  return `${sign}${absolute / 100n}.${(absolute % 100n).toString().padStart(2, "0")}`;
-};
 
 const accountView = (account: Account, completedDelta = "0.00"): AccountView => ({
   id: account.id,
