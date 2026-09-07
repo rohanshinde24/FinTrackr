@@ -1,9 +1,6 @@
-version: "3.8"
-
 services:
-  # PostgreSQL Database
   postgres:
-    image: postgres:15
+    image: postgres:16-alpine
     container_name: fintrackr-postgres
     environment:
       POSTGRES_DB: fintrackr_db
@@ -13,14 +10,19 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fintrackr_user -d fintrackr_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - fintrackr-network
 
-  # Backend API
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: dependencies
     container_name: fintrackr-backend
     environment:
       NODE_ENV: development
@@ -30,32 +32,33 @@ services:
       DB_NAME: fintrackr_db
       DB_USER: fintrackr_user
       DB_PASSWORD: fintrackr_password
-      JWT_SECRET: your-super-secret-jwt-key-here
+      JWT_SECRET: local-development-secret-at-least-32-characters
       JWT_EXPIRES_IN: 7d
       CORS_ORIGIN: http://localhost:3000
     ports:
       - "3001:3001"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - ./backend:/app
       - /app/node_modules
     networks:
       - fintrackr-network
-    command: npm run dev
+    command: sh -c "npm run db:migrate && npm run dev"
 
-  # Frontend React App
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: fintrackr-frontend
     environment:
-      REACT_APP_API_URL: http://localhost:3001
+      DEV_PROXY_TARGET: http://backend:3001
     ports:
       - "3000:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_started
     volumes:
       - ./frontend:/app
       - /app/node_modules
