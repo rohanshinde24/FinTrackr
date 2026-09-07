@@ -66,10 +66,10 @@ export class Account {
   @Column({ nullable: false })
   userId: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: "timestamptz" })
   updatedAt: Date;
 
   // Relationships

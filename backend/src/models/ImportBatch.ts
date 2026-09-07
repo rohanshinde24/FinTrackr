@@ -47,7 +47,7 @@ export class ImportBatch {
   @Column({ type: "jsonb", nullable: true })
   errorSummary?: Array<{ row: number; message: string }>;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "timestamptz" })
   startedAt: Date;
 
   @Column({ type: "timestamp with time zone", nullable: true })

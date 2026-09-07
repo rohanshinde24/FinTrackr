@@ -42,10 +42,10 @@ export class Budget {
   @Column({ nullable: false })
   categoryId: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: "timestamptz" })
   updatedAt: Date;
 
   // Relationships
