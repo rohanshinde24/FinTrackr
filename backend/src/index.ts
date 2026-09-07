@@ -3,11 +3,12 @@ import { Server } from "http";
 import { config } from "dotenv";
 import { createApp } from "./app";
 import { AppDataSource, initializeDatabase } from "./config/database";
+import { loadRuntimeEnvironment } from "./config/environment";
 
 // Load environment variables
 config();
 
-const PORT = Number.parseInt(process.env.PORT || "3001", 10);
+const { port: PORT } = loadRuntimeEnvironment();
 
 const closeServer = (server: Server): Promise<void> =>
   new Promise((resolve, reject) => {
