@@ -7,6 +7,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
+import { apiUrl } from "../config/api";
 
 interface DashboardData {
   totalBalance: number;
@@ -47,9 +48,7 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await fetch(
-          "http://localhost:3001/api/dashboard/overview"
-        );
+        const response = await fetch(apiUrl("/dashboard/overview"));
         if (!response.ok) {
           throw new Error("Failed to fetch dashboard data");
         }

@@ -92,6 +92,7 @@ describe("Dashboard Component", () => {
       expect(screen.getByText("Dashboard")).toBeInTheDocument();
       expect(screen.getByText(/welcome back/i)).toBeInTheDocument();
     });
+    expect(global.fetch).toHaveBeenCalledWith("/api/v1/dashboard/overview");
   });
 
   it("renders financial statistics", async () => {
