@@ -1,0 +1,6 @@
+extends:
+  - recommended
+
+rules:
+  # Health probes intentionally expose only their actual 200/503 outcomes.
+  operation-4xx-response: off
