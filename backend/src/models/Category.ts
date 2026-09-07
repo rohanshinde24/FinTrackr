@@ -51,10 +51,10 @@ export class Category {
   @Column({ type: "timestamp with time zone", nullable: true })
   archivedAt?: Date;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: "timestamptz" })
   updatedAt: Date;
 
   // Relationships
