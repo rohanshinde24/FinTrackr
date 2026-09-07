@@ -15,3 +15,14 @@ export const reportingMonth = (month = currentUtcMonth()): ReportingMonth => {
     end: nextMonth,
   };
 };
+
+export const reportingMonthsEnding = (month: string, count: number): ReportingMonth[] => {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return Array.from({ length: count }, (_, index) => {
+    const offset = count - index - 1;
+    const value = new Date(Date.UTC(year, monthNumber - offset - 1, 1))
+      .toISOString()
+      .slice(0, 7);
+    return reportingMonth(value);
+  });
+};
