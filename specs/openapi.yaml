@@ -726,12 +726,14 @@ components:
 
     Error:
       type: object
-      required: [code, message]
+      required: [code, message, requestId]
       properties:
         code:
           type: string
           examples: [VALIDATION_ERROR]
         message:
+          type: string
+        requestId:
           type: string
         details:
           type: array
